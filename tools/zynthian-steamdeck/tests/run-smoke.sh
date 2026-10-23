@@ -43,6 +43,9 @@ done
 if [[ $backend == pipewire ]]; then
     bash "$here/launch.sh" --check >"$TEST_OUTPUT/preflight.log" 2>"$TEST_OUTPUT/preflight-errors.log"
 fi
+if [[ ${ZYNTHIAN_TEST_GDB:-0} == 1 ]]; then
+    runner+=(gdb --batch --return-child-result -ex 'set pagination off' -ex run -ex 'thread apply all bt' --args)
+fi
 for phase in create restore; do
     timeout 120 xvfb-run -a -s '-screen 0 1280x800x24' \
       "${runner[@]}" python3 "$here/tests/smoke.py" "$phase" >"$TEST_OUTPUT/$phase.log" 2>&1 || {

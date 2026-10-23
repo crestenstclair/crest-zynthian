@@ -27,10 +27,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Test stock UI, MIDI, audio, LV2 and fresh-process snapshot restore
+        id: jack
         run: |
           mkdir -p results
           chmod 777 results
           docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh
+      - name: Capture native backtrace if the JACK integration test fails
+        if: failure() && steps.jack.outcome == 'failure'
+        run: |
+          docker build -t localhost/zynthian-steamdeck:debug - <<'EOF'
+          FROM localhost/zynthian-steamdeck:oram
+          RUN apt-get update && apt-get install -y --no-install-recommends gdb
+          EOF
+          docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home -e TEST_OUTPUT=/results/diagnostic -e ZYNTHIAN_TEST_GDB=1 --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:debug bash /opt/zynthian-steamdeck/tests/run-smoke.sh
       - name: Test SteamOS PipeWire audio compatibility
         run: docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh pipewire
       - name: Package Steam Deck installer
