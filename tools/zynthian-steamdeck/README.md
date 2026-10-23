@@ -63,8 +63,9 @@ default device in SteamOS. The source patch fixes native printf portability and
 uses Pillow's current name for the same image resampling filter. Physical LED
 drivers are imported only when physical LEDs are initialized, allowing stock
 touchscreen mode to run without Pi SPI libraries. A fullscreen window flag fits
-the standard UI to the Deck display. The autoconnect JACK client is explicitly
-closed on shutdown. Native engine algorithms, audio routing decisions and menu
+the standard UI to the Deck display. The title timeout runs on Tk's event loop
+so it cannot keep Python waiting for a closed UI during shutdown. The autoconnect
+JACK client is explicitly closed on shutdown. Native engine algorithms, audio routing decisions and menu
 structure are unchanged.
 
 - Config: `~/.config/zynthian`

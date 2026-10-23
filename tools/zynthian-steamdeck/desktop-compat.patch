@@ -10,6 +10,36 @@ index 0d6c202..a4644b6 100755
          jclient = None
  
  
+diff --git a/zyngui/zynthian_gui_base.py b/zyngui/zynthian_gui_base.py
+index 3256f1f..a1b071b 100644
+--- a/zyngui/zynthian_gui_base.py
++++ b/zyngui/zynthian_gui_base.py
+@@ -229,14 +229,13 @@ class zynthian_gui_base(tkinter.Frame):
+ 
+     def set_title(self, title, fg=None, bg=None, timeout=None):
+         if self.title_timer:
+-            self.title_timer.cancel()
++            self.after_cancel(self.title_timer)
+             self.title_timer = None
+         elif timeout:
+             self.title = self.select_path.get()
+ 
+         if timeout:
+-            self.title_timer = Timer(timeout, self.on_title_timeout)
+-            self.title_timer.start()
++            self.title_timer = self.after(round(timeout * 1000), self.on_title_timeout)
+         else:
+             self.title = title
+             if fg:
+@@ -265,7 +264,7 @@ class zynthian_gui_base(tkinter.Frame):
+     # Function to revert title after toast
+     def on_title_timeout(self):
+         if self.title_timer:
+-            self.title_timer.cancel()
++            self.after_cancel(self.title_timer)
+             self.title_timer = None
+         self.set_title(self.title)
+ 
 diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
 index c871c24..db7bf83 100644
 --- a/zyngui/zynthian_gui_config.py
