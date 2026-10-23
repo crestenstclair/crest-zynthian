@@ -11,6 +11,30 @@ index c871c24..3e67db0 100644
              # convert PIL image object to Tkinter PhotoImage object
              loading_imgs.append(ImageTk.PhotoImage(pil_frame2))
              nframes += 1
+diff --git a/zyngui/zynthian_wsleds_base.py b/zyngui/zynthian_wsleds_base.py
+index b2e4a91..e1b9d45 100644
+--- a/zyngui/zynthian_wsleds_base.py
++++ b/zyngui/zynthian_wsleds_base.py
+@@ -23,10 +23,8 @@
+ #
+ # ******************************************************************************
+ 
+-import board
+ import logging
+ import traceback
+-import neopixel_spi as neopixel
+ 
+ # Zynthian specific modules
+ from zyngui import zynthian_gui_config
+@@ -110,6 +108,8 @@ class zynthian_wsleds_base:
+     def start(self):
+         if self.num_leds > 0:
+             try:
++                import board
++                import neopixel_spi as neopixel
+                 self.spi_board = board.SPI()
+                 self.wsleds = neopixel.NeoPixel_SPI(
+                     self.spi_board, self.num_leds, pixel_order=neopixel.GRB, auto_write=False, frequency=self.spi_freq)
 diff --git a/zynlibs/zynaudioplayer/audio_player.h b/zynlibs/zynaudioplayer/audio_player.h
 index b87b1cb..52779e2 100644
 --- a/zynlibs/zynaudioplayer/audio_player.h
