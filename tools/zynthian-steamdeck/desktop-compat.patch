@@ -1,3 +1,16 @@
+diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
+index c871c24..3e67db0 100644
+--- a/zyngui/zynthian_gui_config.py
++++ b/zyngui/zynthian_gui_config.py
+@@ -796,7 +796,7 @@ if "zynthian_main.py" in sys.argv[0]:
+         fh2 = int(fh * fw2 / fw)
+         nframes = 0
+         while pil_frame:
+-            pil_frame2 = pil_frame.resize((fw2, fh2), Image.ANTIALIAS)
++            pil_frame2 = pil_frame.resize((fw2, fh2), Image.Resampling.LANCZOS)
+             # convert PIL image object to Tkinter PhotoImage object
+             loading_imgs.append(ImageTk.PhotoImage(pil_frame2))
+             nframes += 1
 diff --git a/zynlibs/zynaudioplayer/audio_player.h b/zynlibs/zynaudioplayer/audio_player.h
 index b87b1cb..52779e2 100644
 --- a/zynlibs/zynaudioplayer/audio_player.h

@@ -29,9 +29,10 @@ jobs:
       - name: Test stock UI, MIDI, audio, LV2 and fresh-process snapshot restore
         run: |
           mkdir -p results
-          docker run --rm --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh
+          chmod 777 results
+          docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh
       - name: Test SteamOS PipeWire audio compatibility
-        run: docker run --rm --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh pipewire
+        run: docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh pipewire
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -10,7 +10,7 @@ export ZYNTHIAN_TEST_BACKEND=$backend
 export TEST_OUTPUT="$TEST_OUTPUT/$backend"
 source "$here/environment.sh"
 export ZYNTHIAN_UI_RESTORE_LAST_STATE=0
-mkdir -p "$TEST_OUTPUT"
+mkdir -p "$TEST_OUTPUT" "$HOME"
 python3 "$here/prepare-user.py"
 runner=()
 case "$backend" in
@@ -40,6 +40,9 @@ for _ in {1..50}; do
     sleep 0.1
 done
 [[ $ready == 1 ]] || { cat "$TEST_OUTPUT/$backend.log"; exit 1; }
+if [[ $backend == pipewire ]]; then
+    bash "$here/launch.sh" --check >"$TEST_OUTPUT/preflight.json" 2>"$TEST_OUTPUT/preflight.log"
+fi
 for phase in create restore; do
     timeout 120 xvfb-run -a -s '-screen 0 1280x800x24' \
       "${runner[@]}" python3 "$here/tests/smoke.py" "$phase" >"$TEST_OUTPUT/$phase.log" 2>&1 || {

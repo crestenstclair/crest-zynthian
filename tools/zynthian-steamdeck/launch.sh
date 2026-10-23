@@ -22,11 +22,25 @@ fi
 export JACK_NO_START_SERVER=1
 export PIPEWIRE_LATENCY="${PIPEWIRE_LATENCY:-256/48000}"
 cd "$ZYNTHIAN_UI_DIR"
+child_pid=
+stop_app() {
+    if [[ -n $child_pid ]]; then
+        kill -TERM "$child_pid" 2>/dev/null || true
+        wait "$child_pid" || true
+    fi
+    exit 0
+}
+trap stop_app TERM INT
 # Execute the upstream application, not the appliance power/reboot wrapper.
 while true; do
+    # Reload settings saved by the stock UI, including after a UI restart.
+    source "$ZYNTHIAN_CONFIG_DIR/zynthian_envars.sh"
     set +e
-    pw-jack python3 ./zynthian_main.py "$@"
+    pw-jack python3 ./zynthian_main.py "$@" &
+    child_pid=$!
+    wait "$child_pid"
     result=$?
+    child_pid=
     set -e
     case "$result" in
         102) continue ;;

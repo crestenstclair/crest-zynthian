@@ -59,8 +59,9 @@ The container's PipeWire JACK client configuration enables
 [`jack.default-as-system`](https://docs.pipewire.org/page_man_pipewire-jack_conf_5.html)
 to expose the default SteamOS devices with the port names that unmodified
 Zynthian audio routing expects. Choose speakers, headphones or USB audio as the
-default device in SteamOS. The source patch only fixes native printf portability
-issues; native engine algorithms, routing code and menu structure are unchanged.
+default device in SteamOS. The source patch fixes native printf portability and
+uses Pillow's current name for the same image resampling filter; native engine
+algorithms, routing code and menu structure are unchanged.
 
 - Config: `~/.config/zynthian`
 - User presets, snapshots and recordings: `~/.local/share/zynthian`
