@@ -1,8 +1,23 @@
 diff --git a/zynautoconnect/zynthian_autoconnect.py b/zynautoconnect/zynthian_autoconnect.py
-index 0d6c202..a4644b6 100755
+index 0d6c202..f6e0bcd 100755
 --- a/zynautoconnect/zynthian_autoconnect.py
 +++ b/zynautoconnect/zynthian_autoconnect.py
-@@ -1477,6 +1477,7 @@ def stop():
+@@ -917,8 +917,12 @@ def audio_autoconnect():
+     if state_manager.audio_player and state_manager.audio_player.jackname:
+         ports = jclient.get_ports(
+             state_manager.audio_player.jackname, is_output=True, is_audio=True)
+-        required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}a"].add(ports[0].name)
+-        required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}b"].add(ports[1].name)
++        # PipeWire may publish the stereo ports in separate graph updates.
++        if len(ports) >= 2:
++            required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}a"].add(ports[0].name)
++            required_routes[f"zynmixer:input_{MAIN_MIX_CHAN}b"].add(ports[1].name)
++        else:
++            deferred_audio_connect = True
+ 
+     # Connect inputs to aubionotes
+     if zynthian_gui_config.midi_aubionotes_enabled:
+@@ -1477,6 +1481,7 @@ def stop():
  
      if jclient:
          jclient.deactivate()

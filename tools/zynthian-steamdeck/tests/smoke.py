@@ -70,6 +70,12 @@ def exercise():
         graph = {p.name: [s.name for s in client.get_all_connections(p)]
                  for p in client.get_ports(is_input=True)}
         (output/f'{mode}-graph.json').write_text(json.dumps(graph, indent=2)+'\n')
+        player_ports = client.get_ports(state.audio_player.jackname, is_audio=True, is_output=True)
+        require(len(player_ports) >= 2, 'Global audio player did not publish stereo ports')
+        main_channel = state.zynmixer.MAX_NUM_CHANNELS
+        for port, suffix in zip(player_ports[:2], ('a', 'b')):
+            require(port.name in graph[f'zynmixer:input_{main_channel}{suffix}'],
+                    'Global audio player did not connect after port publication')
         effect_inputs = client.get_ports(effect.get_jackname(), is_audio=True, is_input=True)
         require(len(effect_inputs) >= 2 and all(graph[p.name] for p in effect_inputs),
                 'LV2 effect has unconnected audio inputs')
