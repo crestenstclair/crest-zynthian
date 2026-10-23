@@ -33,7 +33,8 @@ pipewire)
     ;;
 *) echo "Unknown backend: $backend" >&2; exit 1 ;;
 esac
-trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+device_pid=
+trap 'if [[ -n $device_pid ]]; then kill "$device_pid" 2>/dev/null || true; fi; kill "$server_pid" 2>/dev/null || true' EXIT
 ready=0
 for _ in {1..50}; do
     if "${runner[@]}" jack_lsp >/dev/null 2>&1; then ready=1; break; fi
@@ -41,7 +42,17 @@ for _ in {1..50}; do
 done
 [[ $ready == 1 ]] || { cat "$TEST_OUTPUT/$backend.log"; exit 1; }
 if [[ $backend == pipewire ]]; then
-    bash "$here/launch.sh" --check >"$TEST_OUTPUT/preflight.log" 2>"$TEST_OUTPUT/preflight-errors.log"
+    PIPEWIRE_PROPS='{ node.name = zynthian-test-output media.class = Audio/Sink node.always-process = true }' \
+        pw-jack python3 "$here/tests/pipewire-device.py" >"$TEST_OUTPUT/device.log" 2>&1 &
+    device_pid=$!
+    for _ in {1..50}; do
+        if pw-jack jack_lsp | grep -q '^system:playback_2$'; then break; fi
+        sleep 0.1
+    done
+    pw-dump >"$TEST_OUTPUT/pipewire-graph.json"
+    bash "$here/launch.sh" --check >"$TEST_OUTPUT/preflight.log" 2>"$TEST_OUTPUT/preflight-errors.log" || {
+        cat "$TEST_OUTPUT/preflight-errors.log" "$TEST_OUTPUT/device.log"; exit 1;
+    }
 fi
 if [[ ${ZYNTHIAN_TEST_GDB:-0} == 1 ]]; then
     runner+=(gdb --batch --return-child-result -ex 'set pagination off' -ex run -ex 'thread apply all bt' --args)

@@ -18,6 +18,7 @@ jobs:
           sparse-checkout: tools/zynthian-steamdeck
       - uses: docker/setup-buildx-action@v3
       - name: Build native x86-64 runtime
+        id: runtime
         uses: docker/build-push-action@v6
         with:
           context: tools/zynthian-steamdeck
@@ -41,6 +42,7 @@ jobs:
           EOF
           docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home -e TEST_OUTPUT=/results/diagnostic -e ZYNTHIAN_TEST_GDB=1 --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:debug bash /opt/zynthian-steamdeck/tests/run-smoke.sh
       - name: Test SteamOS PipeWire audio compatibility
+        if: always() && steps.runtime.outcome == 'success'
         run: docker run --rm --user 1000:1000 -e USER=ubuntu -e HOME=/tmp/zynthian-home --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh pipewire
       - name: Package Steam Deck installer
         run: |
@@ -52,7 +54,7 @@ jobs:
       - name: Verify installer and host PipeWire connection through Distrobox
         run: |
           sudo apt-get update
-          sudo apt-get install -y podman distrobox pipewire-bin libspa-0.2-modules
+          sudo apt-get install -y podman distrobox pipewire-bin pipewire-jack python3-jack-client libspa-0.2-modules
           bash tools/zynthian-steamdeck/tests/install-smoke.sh bundle results/installer
       - name: Upload test evidence
         if: always()

@@ -18,12 +18,16 @@ mkdir "$pw_config/pipewire.conf.d"
 cp "$here/tests/pipewire.conf" "$pw_config/pipewire.conf.d/90-test.conf"
 PIPEWIRE_CONFIG_DIR="$pw_config" pipewire >"$output/pipewire.log" 2>&1 &
 server_pid=$!
-trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+device_pid=
+trap 'if [[ -n $device_pid ]]; then kill "$device_pid" 2>/dev/null || true; fi; kill "$server_pid" 2>/dev/null || true' EXIT
 for _ in {1..50}; do
     [[ -S $XDG_RUNTIME_DIR/pipewire-0 ]] && break
     sleep 0.1
 done
 [[ -S $XDG_RUNTIME_DIR/pipewire-0 ]]
+PIPEWIRE_PROPS='{ node.name = zynthian-test-output media.class = Audio/Sink node.always-process = true }' \
+    pw-jack /usr/bin/python3 "$here/tests/pipewire-device.py" >"$output/device.log" 2>&1 &
+device_pid=$!
 bash "$bundle/install.sh" >"$output/install.log" 2>&1 || { tail -100 "$output/install.log"; exit 1; }
 "$HOME/.local/bin/zynthian-steamdeck" --check >"$output/preflight.log" 2>&1 || {
     cat "$output/preflight.log"; exit 1;
