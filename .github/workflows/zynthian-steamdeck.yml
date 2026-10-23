@@ -1,7 +1,7 @@
 name: Zynthian Steam Deck
 on:
   push:
-    branches: ['codex/zynthian-steamdeck']
+    branches: ['main', 'codex/zynthian-steamdeck']
     paths: ['tools/zynthian-steamdeck/**', '.github/workflows/zynthian-steamdeck.yml']
   pull_request:
     paths: ['tools/zynthian-steamdeck/**', '.github/workflows/zynthian-steamdeck.yml']

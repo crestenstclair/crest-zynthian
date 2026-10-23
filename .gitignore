@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+/build/
+/results/
+/bundle/
+/tools/zynthian-steamdeck/results/
+/tools/zynthian-steamdeck/bundle/
+zynthian-steamdeck-image.tar*

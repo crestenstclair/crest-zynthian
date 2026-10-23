@@ -1,5 +1,10 @@
 # Stock Zynthian Oram on Steam Deck
 
+Maintained in [crest-zynthian](https://github.com/crestenstclair/crest-zynthian).
+Use this repository's [Actions builds](https://github.com/crestenstclair/crest-zynthian/actions/workflows/zynthian-steamdeck.yml)
+for installer bundles and test evidence. Run the source build commands below
+from `tools/zynthian-steamdeck/`.
+
 Native Linux x86-64 packaging of the upstream Zynthian interface, MIDI router,
 sequencer, mixer and sampler. Uses the existing touchscreen interface at
 1280 × 800 in fullscreen. No controller mapping, webview or replacement UI.

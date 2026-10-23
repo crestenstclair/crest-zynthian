@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-23",
+  "scope": "Zynthian Steam Deck runtime history and current public HTML design only",
+  "filtered_runtime_tip": "918396fe21aeb63e8100b1b69dceef889ff19615",
+  "commits": [
+    {
+      "source": "11901bc1e3da3a829c62500f98c88a9e2d08f085",
+      "destination": "738584dfa53c00d1907eb94f453a10902122c831"
+    },
+    {
+      "source": "29d931e0ba1e9f6c06747b35784e08bea572a5b7",
+      "destination": "b33ea9b32acd21cb3396c7e2b023ff5216f7f4ac"
+    },
+    {
+      "source": "2d2fb91edc3beb80ae2881950581b33b6b6b387a",
+      "destination": "e5b863a9c27b1c6af87747951895bf2dac59a734"
+    },
+    {
+      "source": "302f757f58d3fd771831a6fe5f88464b512ef173",
+      "destination": "8de92d2cb05f54ce330ce9de4bb475af199a2977"
+    },
+    {
+      "source": "4f141bf8428b27a9c797a79e74e19bdf51e12c25",
+      "destination": "c04e3598098880e7424047ed3f57b5a37539f36b"
+    },
+    {
+      "source": "56ee48136f7f2fed795f19c4f6f1d8e8fb8f648e",
+      "destination": "709419c8e60d554e95c2f624831c9d0f146d01d5"
+    },
+    {
+      "source": "5d88f6f69b24006c441067714749e35f6959d408",
+      "destination": "6abe9fc0173b6a698c4e884cfe174148e6621974"
+    },
+    {
+      "source": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "destination": "918396fe21aeb63e8100b1b69dceef889ff19615"
+    },
+    {
+      "source": "738d1b5029d1b603becf8a54c25a576c7817d562",
+      "destination": "1b0b4d6959679346f8900f47ef3c41a842e53dfc"
+    },
+    {
+      "source": "a6cbf71525fcae5b45fe341ca114132c1f37ce22",
+      "destination": "d7db9a91667a004c4c5183aaf0df26aa166b2980"
+    },
+    {
+      "source": "b2989c7a1ffb87d233a4241ecedf9eadb4c383b9",
+      "destination": "29d764127d3e6dbd86c089ad58fcad26430b6f2f"
+    },
+    {
+      "source": "dc8d0b27062f2eb4867f16cb1406ea1c6b5065e2",
+      "destination": "de5aef736427fc2f59e579cf61adeea5e47f5cff"
+    },
+    {
+      "source": "e51b077e8b9f8d76799e58a51ca99356fcc6b502",
+      "destination": "367e1b706026b474046a54fe65f95339c0fe6a0b"
+    }
+  ],
+  "files": [
+    {
+      "path": ".github/workflows/zynthian-steamdeck.yml",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "fa364689ec59a4f9d26a84ed6a9384acb1f059819b8b98863e95abfa3984fdad",
+      "destination_sha256": "320c3262957035ea140283523ed1abd4740b541e1c100e4eb2c9b3f2b137c245",
+      "changed_during_move": true
+    },
+    {
+      "path": "tools/zynthian-steamdeck/Containerfile",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "26591fa401dd40ab34d3d8d23133290c04e40596f0a98cbee58211ed27b4248d",
+      "destination_sha256": "26591fa401dd40ab34d3d8d23133290c04e40596f0a98cbee58211ed27b4248d",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/README.md",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "0e2bedad7d4cf24c1a1840519f0b767ec9504ba7ffe0b94cfe72d21bbb400dcb",
+      "destination_sha256": "741252c59a2d6df91fe301d7f2ee9af3f4c5783e265f7f193c8a51a84292b4d7",
+      "changed_during_move": true
+    },
+    {
+      "path": "tools/zynthian-steamdeck/build-runtime.sh",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "54a3e158825b5bb7c07cf3e1f3377b26bec8226e2ea0702f804fd07a14c58fe9",
+      "destination_sha256": "54a3e158825b5bb7c07cf3e1f3377b26bec8226e2ea0702f804fd07a14c58fe9",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/check-runtime.py",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "f72e2556fe9e1504fef4e0bfd2498b7b461059565696060857ea27f569414bed",
+      "destination_sha256": "f72e2556fe9e1504fef4e0bfd2498b7b461059565696060857ea27f569414bed",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/desktop-compat.patch",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "35bdf359bb1431e7e52fcc219fa87da8910cafe4d9f5aaf1f427dabb3e3769ee",
+      "destination_sha256": "35bdf359bb1431e7e52fcc219fa87da8910cafe4d9f5aaf1f427dabb3e3769ee",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/environment.sh",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "696f88718dc29188f41ed5f32ffa9325a3a38a7910c8ea2073dcb9a816d26082",
+      "destination_sha256": "696f88718dc29188f41ed5f32ffa9325a3a38a7910c8ea2073dcb9a816d26082",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/install.sh",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "a129e764eed5f2858a3c5aeeb83b873a7f5fbe54331db787d30f15ef976dbcff",
+      "destination_sha256": "a129e764eed5f2858a3c5aeeb83b873a7f5fbe54331db787d30f15ef976dbcff",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/launch.sh",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "6ea32140d3244fad6b695630dc384b6100f478cf368413b8a7a28249ec7a8c7c",
+      "destination_sha256": "6ea32140d3244fad6b695630dc384b6100f478cf368413b8a7a28249ec7a8c7c",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/pipewire-jack.conf",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "a675bc9ac5aaab0c6d01fad88322cdda7b172ffe24a63502163fc0523a42e63f",
+      "destination_sha256": "a675bc9ac5aaab0c6d01fad88322cdda7b172ffe24a63502163fc0523a42e63f",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/prepare-user.py",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "0a24c0f9b221833ab1b7162eeb702f867350e083666e2ac62f8e8da833f3fc98",
+      "destination_sha256": "0a24c0f9b221833ab1b7162eeb702f867350e083666e2ac62f8e8da833f3fc98",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/requirements.txt",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "629877fcc6e81cbbd4e1c79f60d96db72477e66850971e7e1e8d5fb787af251f",
+      "destination_sha256": "629877fcc6e81cbbd4e1c79f60d96db72477e66850971e7e1e8d5fb787af251f",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/sources.lock.json",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "65e1ba4356ad948666aacf1e302f951ea878525e3ff74561b4d427e016f315ab",
+      "destination_sha256": "65e1ba4356ad948666aacf1e302f951ea878525e3ff74561b4d427e016f315ab",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/tests/install-smoke.sh",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "826de2cc5f344bcacc258ed77409b9d23cdb6d19dedca20ec9d562dc8fd87c97",
+      "destination_sha256": "826de2cc5f344bcacc258ed77409b9d23cdb6d19dedca20ec9d562dc8fd87c97",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/tests/pipewire-device.py",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "0d407b5ced4eb1915710258742e6c941fc171a32691002d06e33a42b346e9a40",
+      "destination_sha256": "0d407b5ced4eb1915710258742e6c941fc171a32691002d06e33a42b346e9a40",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/tests/pipewire.conf",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "ed0fd71ed9931286c831cca36157807784634612589b43d6b8eeb269afbe14a6",
+      "destination_sha256": "ed0fd71ed9931286c831cca36157807784634612589b43d6b8eeb269afbe14a6",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/tests/run-smoke.sh",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "328ebec8b87cbd6f4a1ac097b5b1f88ffc8cb93b954facfb5cd8158e4bcc4fe6",
+      "destination_sha256": "328ebec8b87cbd6f4a1ac097b5b1f88ffc8cb93b954facfb5cd8158e4bcc4fe6",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/tests/smoke.py",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "f004a595cbe0de97eb0c3781806e1e07dc0de256952ab47a45ce64d6354d7889",
+      "destination_sha256": "f004a595cbe0de97eb0c3781806e1e07dc0de256952ab47a45ce64d6354d7889",
+      "changed_during_move": false
+    },
+    {
+      "path": "tools/zynthian-steamdeck/zynthian-steamdeck",
+      "source_commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+      "source_sha256": "1454718b70c4ce4de334029a30717b4e4abc23bdac41b74fe433cd8ec1301c56",
+      "destination_sha256": "1454718b70c4ce4de334029a30717b4e4abc23bdac41b74fe433cd8ec1301c56",
+      "changed_during_move": false
+    },
+    {
+      "path": "design/firmware-control-map.html",
+      "source_commit": "f6b16f224e5da09e222622d9ffe2486793f410fa",
+      "source_sha256": "d9723889edac4bb3ef2585aa976581a84f482464431428e403d46c02a5708432",
+      "destination_sha256": "6c8a4682fe78a54d81ef23899986732ba00a8714842a32f44ddb742204b75f75",
+      "changed_during_move": true
+    }
+  ],
+  "source_ci": {
+    "run_id": 40020029639,
+    "commit": "6368d537a74d7727d007b1944d8fb234961591ba",
+    "conclusion": "success"
+  },
+  "exclusions": [
+    "Private pedal source, firmware, plugin products and validation evidence",
+    "Detailed private pedal migration inventory",
+    "Older HTML/design history and unrelated repository history"
+  ]
+}

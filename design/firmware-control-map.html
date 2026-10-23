@@ -1,0 +1,3519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crest Zynthian — Control Map</title>
+<style>
+:root{color-scheme:dark;--bg:#121513;--panel:#1c201d;--line:#353b35;--text:#eef0e8;--muted:#a9b1a6;--accent:#d8ed97;--mono:ui-monospace,SFMono-Regular,Consolas,monospace;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-size:14px}button,input,select{font:inherit}button,select{cursor:pointer}button{color:inherit}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}button:disabled{opacity:.35;cursor:default}a{color:var(--accent)}
+header{height:64px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 32px;gap:20px}.brand{font-size:17px;font-weight:750;letter-spacing:-.5px}.brand span{color:var(--accent);margin-right:13px}.eyebrow{font:10px var(--mono);text-transform:uppercase;letter-spacing:1.7px;color:var(--muted)}.header-note{display:flex;gap:25px;align-items:center}.pill{border:1px solid var(--line);border-radius:30px;padding:7px 11px;font:10px var(--mono);color:var(--muted)}
+.layout{display:grid;grid-template-columns:260px minmax(0,1fr);max-width:1680px;margin:auto}.sidebar{padding:30px 19px 24px;border-right:1px solid var(--line);height:calc(100dvh - 64px);position:sticky;top:0;overflow:auto}.sidebar-top{display:flex;justify-content:space-between;margin:0 9px 18px}.search{width:100%;background:#202520;color:var(--text);border:1px solid var(--line);border-radius:7px;padding:11px 12px;margin-bottom:24px}.category{font:10px var(--mono);letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin:20px 10px 8px}.unit-button{display:flex;width:100%;text-align:left;align-items:center;justify-content:space-between;gap:8px;background:none;border:0;border-radius:6px;padding:11px 10px;color:#bec6ba;font-size:13px}.unit-button:hover{background:#242b22}.unit-button[aria-current=true]{background:#d8ed9713;color:var(--accent)}.unit-button small{font:10px var(--mono);opacity:.7}.sidebar-foot{font-size:11px;color:var(--muted);line-height:1.6;padding:20px 10px 0}.empty{padding:16px 10px;color:var(--muted)}
+main{min-width:0;padding:24px 32px 30px}.intro{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:18px}.intro h1{font-size:clamp(26px,2.5vw,34px);font-weight:550;letter-spacing:-1.5px;line-height:1.12;margin:10px 0}.intro p{color:var(--muted);max-width:540px;line-height:1.65;margin:0}.surface-count{font:42px var(--mono);color:var(--accent);line-height:1}.surface-count small{display:block;font:10px var(--mono);color:var(--muted);letter-spacing:1.5px;margin-top:10px;white-space:nowrap}.target-bar{border:1px solid var(--line);border-radius:9px;padding:5px;display:flex;gap:5px;background:#171b18;margin-bottom:10px}.target{background:none;border:0;border-radius:5px;flex:1;padding:11px 9px;color:var(--muted);font-size:12px}.target[aria-pressed=true]{background:var(--accent);color:#18200e;font-weight:700}.target-note{font-size:12px;color:var(--muted);min-height:0;line-height:1.6;margin:8px 1px 18px}.mobile-select{display:none}.unit-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid var(--line);padding-top:18px}.unit-heading h2{font-size:29px;font-weight:550;letter-spacing:-.8px;margin:5px 0 7px}.unit-heading p{color:var(--muted);margin:0;font-size:13px;line-height:1.5}.text-button{border:1px solid var(--line);border-radius:6px;background:none;padding:9px 12px;font-size:11px;color:var(--muted);white-space:nowrap}.text-button:hover{color:var(--text);border-color:#717c68}.pages{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0 14px}.page-button{background:none;border:1px solid var(--line);border-radius:6px;padding:9px 12px;font-size:12px;color:var(--muted)}.page-button span{font:10px var(--mono);margin-right:8px;opacity:.65}.page-button[aria-pressed=true]{background:#2a3324;border-color:#6f8250;color:var(--accent)}
+.surface{background:var(--panel);border:1px solid #424a3d;border-radius:13px;padding:18px;box-shadow:0 18px 45px #0003}.surface-head{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:12px}.screen{border-left:3px solid var(--accent);padding-left:14px}.screen-title{font-size:17px;margin:5px 0 3px}.screen small{font:10px var(--mono);color:var(--muted)}.navigation{display:flex;gap:6px}.navigation button{background:#292f28;border:1px solid #464e40;border-radius:6px;width:35px;height:35px;font-size:17px}.banks{display:grid;gap:18px}.bank-label{display:flex;gap:12px;align-items:center;color:var(--muted);font:10px var(--mono);letter-spacing:1px;text-transform:uppercase;margin:2px 0 12px}.bank-label::after{content:"";height:1px;background:var(--line);flex:1}.control-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.control{min-height:86px;border:1px solid #3b4336;background:#232a21;border-radius:7px;padding:12px 13px;position:relative;overflow:hidden}.control-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.slot{font:11px var(--mono);color:var(--accent)}.control-group{font:9px var(--mono);color:#b3beab;text-transform:uppercase;letter-spacing:.4px;text-align:right;max-width:78%}.control-name{display:block;font-size:14px;font-weight:550;line-height:1.35;overflow-wrap:anywhere}.control.unused{background:transparent;border:1px dashed #363e32;color:#7f8979}.control.unused .slot{color:#7f8979}.control.unused .control-name{font-size:11px;font-weight:400}.surface-footer{border-top:1px solid var(--line);margin-top:20px;padding-top:16px;display:flex;justify-content:space-between;gap:14px;font-size:11px;color:var(--muted);line-height:1.6}.dial-labels{display:flex;gap:18px}.dial-labels strong{color:var(--text);font-weight:500}.surface-note{font-size:12px;color:var(--muted);line-height:1.7;margin:15px 2px 24px}.surface-note:empty{display:none}.principles{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;border-top:1px solid var(--line);padding-top:23px;margin-top:26px}.principle .number{font:10px var(--mono);color:var(--accent)}.principle h3{font-size:13px;font-weight:550;margin:9px 0}.principle p{color:var(--muted);font-size:12px;line-height:1.65;margin:0}details{border-top:1px solid var(--line);margin-top:26px;padding-top:18px}summary{cursor:pointer;font-size:13px;color:var(--muted);width:fit-content}.all-pages{display:grid;gap:15px;margin-top:20px}.map-section{border:1px solid var(--line);border-radius:8px;padding:17px}.map-section h3{font-size:14px;font-weight:550;margin:0 0 13px;color:var(--accent)}.map-row{display:grid;grid-template-columns:42px 100px 1fr;gap:12px;line-height:1.65;padding:5px 0;font-size:12px}.map-row .range{font:10px var(--mono);color:var(--muted);padding-top:4px}.map-row .group{color:var(--muted)}footer{margin-top:28px;font:10px var(--mono);color:var(--muted);line-height:1.7;display:flex;justify-content:space-between;gap:20px}.sr-only{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}.no-js{padding:30px;color:#f4c78b}
+@media(min-width:1450px){.control{min-height:92px}.control-name{font-size:16px}main{padding-left:55px;padding-right:55px}}
+@media(max-width:1050px){.layout{grid-template-columns:220px minmax(0,1fr)}main{padding:28px 24px}.control{padding:11px 10px}.control-name{font-size:12px}.control-group{font-size:8px}.header-note .eyebrow{display:none}.surface{padding:18px}}
+@media(max-width:760px){header{padding:0 20px;height:65px}.header-note .pill{font-size:9px}.layout{display:block}.sidebar{display:none}main{padding:25px 18px}.intro{align-items:center}.intro h1{font-size:30px}.surface-count{font-size:38px}.intro p{font-size:12px}.mobile-select{display:block;margin:22px 0 15px}.mobile-select select{margin-top:8px;width:100%;padding:12px;background:#232a21;border:1px solid var(--line);border-radius:6px;color:var(--text)}.target{font-size:11px;padding:10px 4px}.unit-heading{padding-top:20px}.unit-heading h2{font-size:25px}.surface{padding:14px}.control-grid{gap:7px}.control{min-height:99px;padding:10px 8px}.control-group{display:none}.control-name{font-size:11px}.control-top{margin-bottom:13px}.principles{gap:15px}.principle p{font-size:11px}.surface-footer{flex-direction:column;gap:7px}.map-row{grid-template-columns:32px 72px 1fr;gap:8px;font-size:11px}.pages{gap:6px}.page-button{padding:8px 9px;font-size:11px}.page-button span{margin-right:5px}footer{flex-direction:column;gap:8px}.text-button{padding:9px}.surface-count small{font-size:8px;letter-spacing:1px}.target-note{min-height:50px}.screen-title{font-size:15px}}
+@media print{color-scheme:light;body{background:white;color:#111}header{height:auto;padding:0 0 20px;border-color:#aaa}.header-note,.sidebar,.intro,.target-bar,.target-note,.mobile-select,.pages,.surface,.surface-note,.text-button,.principles,footer{display:none}.layout{display:block}main{padding:20px 0}.unit-heading{border:0;padding:0}.unit-heading h2{color:#111}.unit-heading p,.eyebrow{color:#555}details{border:0}summary{display:none}.all-pages{display:grid!important}.map-section{break-inside:avoid;border-color:#aaa}.map-section h3{color:#111}.map-row .group,.map-row .range{color:#555}.brand span{color:#111}}
+.io-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:20px 0 10px}.io-heading .pill{color:var(--accent)}.io-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.io-card{border:1px solid var(--line);border-radius:7px;padding:12px;background:#181e18;min-width:0}.io-card dt{font:9px var(--mono);color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px}.io-card dd{font-size:12px;line-height:1.5;margin:0}.io-grid dl{margin:0}.signal-path{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:10px;align-items:center;margin:12px 0 0;font-size:11px;line-height:1.5;color:var(--muted)}.signal-path .signal-unit{color:var(--accent);text-align:center}.signal-path .signal-end{text-align:right}.signal-link{color:#6f8250}.routing-note{font-size:11px;color:var(--muted);line-height:1.6;margin:9px 0 0}.page-button.shared-page{border-style:dashed}.rig-guide{margin-top:22px}.rig-guide summary{color:var(--accent)}.rig-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:18px}.rig-guide h3{font-size:13px;font-weight:550;margin:0 0 8px}.rig-guide p{font-size:12px;line-height:1.7;color:var(--muted);margin:0}.rig-guide .sources{margin-top:17px;font-size:10px}.io-plan-label{font-size:10px;color:var(--muted)}
+@media(max-width:760px){.io-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.io-heading{align-items:flex-start}.io-heading .pill{font-size:9px}.signal-path{gap:5px;font-size:10px}.rig-guide-grid{grid-template-columns:1fr}.io-plan-label{font-size:9px}}
+@media print{.io-card{background:white;border-color:#aaa;break-inside:avoid}.io-card dt,.routing-note,.signal-path,.io-plan-label{color:#555}.signal-path .signal-unit,.io-heading .pill{color:#111}.rig-guide{display:none}.io-heading,.io-grid,.signal-path{break-inside:avoid}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span>◒</span>Crest Zynthian</div><div class="header-note"><span class="eyebrow">Zynthian instrument rig</span><span class="pill">CONTROL MAP / V.03</span></div></header>
+<noscript><p class="no-js">Enable JavaScript to browse the firmware maps. This file works offline.</p></noscript>
+<div class="layout">
+<aside class="sidebar" aria-label="Firmware library"><div class="sidebar-top"><span class="eyebrow">Firmware library</span><span class="eyebrow" id="unit-count"></span></div><label class="sr-only" for="search">Find firmware</label><input class="search" id="search" type="search" placeholder="Find firmware…" autocomplete="off"><nav id="library" aria-label="Choose firmware"></nav><p class="sidebar-foot">One firmware, one identity.<br>The same sections across your rig.</p></aside>
+<main id="main">
+<div class="intro"><div><div class="eyebrow">A shared language for your rig</div><h1>One surface. Every sound.</h1><p>Pick a firmware. Shape the sound. Place it in your Zynthian rig.</p></div><div class="surface-count">16<small>CONTROLS / PAGE</small></div></div>
+<div class="target-bar" role="group" aria-label="Control layout"><button class="target" data-target="surface" aria-pressed="true">Pisound / Pi</button><button class="target" data-target="push" aria-pressed="false">Push 3</button><button class="target" data-target="oxi" aria-pressed="false">OXI ONE MKII</button><button class="target" data-target="tracker" aria-pressed="false">Tracker+</button></div>
+<p class="target-note" id="target-note"></p>
+<label class="mobile-select"><span class="eyebrow">Choose firmware</span><select id="mobile-unit"></select></label>
+<section aria-labelledby="unit-title"><div class="unit-heading"><div><div class="eyebrow" id="unit-category"></div><h2 id="unit-title"></h2><p id="unit-description"></p></div><button class="text-button" id="print">Print unit map</button></div>
+<section aria-label="Planned Zynthian connections"><div class="io-heading"><span class="pill" id="io-role"></span><span class="io-plan-label">PLANNED ZYNTHIAN I/O</span></div><div class="io-grid" id="io-grid"></div><div class="signal-path" id="signal-path"></div><p class="routing-note" id="routing-note"></p></section>
+<nav class="pages" id="pages" aria-label="Firmware sections"></nav>
+<div class="surface"><div class="surface-head"><div class="screen"><div class="eyebrow" id="page-position"></div><div class="screen-title" id="page-title"></div><small id="page-subtitle"></small></div><div class="navigation"><button id="previous" aria-label="Previous section">‹</button><button id="next" aria-label="Next section">›</button></div></div><div class="banks" id="banks"></div><div class="surface-footer"><div class="dial-labels"><span><strong>PAGE</strong> · choose section</span><span><strong>PRESET</strong> · choose sound</span></div><span>Same order. Knobs or faders.</span></div></div>
+<p class="surface-note" id="unit-note"></p>
+<div class="principles"><div class="principle"><span class="number">01 / PLAY</span><h3>One firmware, one processor.</h3><p>Choose the active unit to edit its sound. Arrange units in Zynthian chains and route them through its mixer and shared physical connections.</p></div><div class="principle"><span class="number">02 / RECALL</span><h3>Sound and rig are different.</h3><p>The preset dial selects a sound in the active unit. A Zynthian snapshot recalls the whole rig; a ZS3 recalls a scene within the existing chain layout.</p></div><div class="principle"><span class="number">03 / CONNECT</span><h3>One shared Rig I/O page.</h3><p>Keep audio levels, MIDI selection, and rig controls together. Firmware pages stay focused on the sound.</p></div></div>
+<details class="rig-guide"><summary>How the Zynthian rig connects</summary><div class="rig-guide-grid"><section><h3>One stereo pair per Pisound</h3><p>Standard Pisound provides one stereo audio input and one stereo audio output, plus DIN MIDI in and out. All units on that Pi share those jacks. More independent stereo sends or returns need more audio I/O or another Pi.</p></section><section><h3>Controllers and audio take separate paths</h3><p>Push, OXI, or Tracker can supply MIDI to the selected instrument. Push or Tracker audio can feed the effects chain. OXI supplies notes, clock, and controls rather than audio. Choose one clock leader for the rig.</p></section><section><h3>Instrument lane or effects lane</h3><p>A synth takes MIDI and makes audio. An effect takes audio from an earlier unit or the physical input. For an external send/return, use a wet-only effects path and blend at the source. Multiple external sources share the input pair through a mixer or a source choice.</p></section><section><h3>Sound, rig and scene</h3><p>Use an engine preset for a sound, a snapshot for the whole rig, and ZS3 for scenes within that rig. Configure Program Change routing explicitly so scene recall does not consume an instrument’s intended program messages.</p></section><section><h3>MIDI output needs its own route</h3><p>T-1 needs to send notes to an instrument; MIDI-capable ZOIA patches may need the same. Zynthian provides MIDI-chain routing; our T-1 and ZOIA wrappers still need their LV2 MIDI outputs implemented and tested. A physical MIDI-out socket alone does not provide that route.</p></section><section><h3>Multiple Pis, one control language</h3><p>Give each Pi a clear destination name, such as Voices or Space. Select the destination Pi, then the active unit and section. Keep the same control order on each controller. The proposed 16-control external surface is optional. Its four groups of four can guide Zynthian parameter pages; mappings still need validation.</p></section></div><p class="sources">Design assumptions: Zynthian on Pi 5 with the existing Pisound, subject to image and hardware validation. These are proposed connections, not a statement that every firmware is ready to host. References: <a href="https://blokas.io/pisound/docs/general-specifications/">Pisound connections</a> · <a href="https://wiki.zynthian.org/index.php/Zynthian_UI_User%27s_Guide_-_Oram">Zynthian chains and recall</a> · <a href="../docs/RIG-DESIGN.md">Rig design</a>.</p></details>
+<details id="all-sections"><summary id="all-sections-label">View the complete unit map</summary><div class="all-pages" id="all-pages"></div></details>
+</section><footer><span>Layout proposal · control names, not final assignments</span><span>Zynthian host · shared audio and MIDI I/O</span></footer>
+<p class="sr-only" id="announcement" role="status" aria-live="polite"></p>
+</main></div>
+<script id="map-data" type="application/json">
+[
+  {
+    "id": "steampipe",
+    "name": "SteamPipe",
+    "category": "Instruments",
+    "description": "Physical-model voices: excitation, resonator, expression, space.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Exciter",
+            "controls": [
+              "Cutoff",
+              "Resonance",
+              "Generator gain",
+              "Envelope amount"
+            ]
+          },
+          {
+            "name": "Pipe",
+            "controls": [
+              "Tune",
+              "Fine tune",
+              "Harmonics",
+              "Feedback"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Attack",
+              "Decay",
+              "Sustain",
+              "Release"
+            ]
+          },
+          {
+            "name": "Space / level",
+            "controls": [
+              "Reverb mix",
+              "Reverb size",
+              "Voice spread",
+              "Preset volume"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Exciter",
+        "rows": [
+          {
+            "name": "Generator",
+            "controls": [
+              "DC",
+              "Cutoff",
+              "Resonance",
+              "Key tracking"
+            ]
+          },
+          {
+            "name": "Dynamics",
+            "controls": [
+              "Envelope amount",
+              "Generator gain",
+              "Mod depth",
+              "External input"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Attack",
+              "Decay",
+              "Sustain",
+              "Release"
+            ]
+          },
+          {
+            "name": "Response",
+            "controls": [
+              "Velocity",
+              "Scaling",
+              "Legato",
+              "Mod source"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Pipe",
+        "rows": [
+          {
+            "name": "Tuning",
+            "controls": [
+              "Tune",
+              "Fine tune",
+              "Harmonics",
+              "Polarity"
+            ]
+          },
+          {
+            "name": "Feedback",
+            "controls": [
+              "Push",
+              "Decay",
+              "Release",
+              "Mod depth"
+            ]
+          },
+          {
+            "name": "Saturation",
+            "controls": [
+              "Soft / hard",
+              "Symmetry",
+              "Symmetry mode",
+              null
+            ]
+          },
+          {
+            "name": "Split",
+            "controls": [
+              "Split point",
+              "Split amount",
+              "Mod source",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Tone & voice",
+        "rows": [
+          {
+            "name": "Filters",
+            "controls": [
+              "High-pass",
+              "Low-pass",
+              "HP mod depth",
+              "LP mod depth"
+            ]
+          },
+          {
+            "name": "Compensation",
+            "controls": [
+              "HP compensation",
+              "LP compensation",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Voice",
+            "controls": [
+              "Mode",
+              "Detune",
+              "Glide",
+              "Glide time"
+            ]
+          },
+          {
+            "name": "Output",
+            "controls": [
+              "Voice spread",
+              "Preset volume",
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Modulation",
+        "rows": [
+          {
+            "name": "LFO 1",
+            "controls": [
+              "LFO 1 speed",
+              "LFO 1 shape",
+              "LFO 1 amount",
+              "LFO 1 destination"
+            ]
+          },
+          {
+            "name": "LFO 2",
+            "controls": [
+              "LFO 2 speed",
+              "LFO 2 shape",
+              "LFO 2 amount",
+              "LFO 2 destination"
+            ]
+          },
+          {
+            "name": "LFO 3",
+            "controls": [
+              "LFO 3 speed",
+              "LFO 3 shape",
+              "LFO 3 amount",
+              "LFO 3 destination"
+            ]
+          },
+          {
+            "name": "LFO 4",
+            "controls": [
+              "LFO 4 speed",
+              "LFO 4 shape",
+              "LFO 4 amount",
+              "LFO 4 destination"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Modulation +",
+        "rows": [
+          {
+            "name": "LFO 5",
+            "controls": [
+              "LFO 5 speed",
+              "LFO 5 shape",
+              "LFO 5 amount",
+              "LFO 5 destination"
+            ]
+          },
+          {
+            "name": "LFO 1 / 2",
+            "controls": [
+              "LFO 1 delay",
+              "LFO 1 sync",
+              "LFO 2 delay",
+              "LFO 2 sync"
+            ]
+          },
+          {
+            "name": "LFO 3 / 4",
+            "controls": [
+              "LFO 3 delay",
+              "LFO 3 sync",
+              "LFO 4 delay",
+              "LFO 4 sync"
+            ]
+          },
+          {
+            "name": "LFO 5",
+            "controls": [
+              "LFO 5 delay",
+              "LFO 5 sync",
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Space",
+        "rows": [
+          {
+            "name": "Reverb",
+            "controls": [
+              "Size",
+              "Mix",
+              "Spin",
+              "Spread"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Bass",
+              "Treble",
+              "Mod depth",
+              "Mod source"
+            ]
+          },
+          {
+            "name": "Switch",
+            "controls": [
+              "Reverb bypass",
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Instrument + audio input",
+      "audioIn": "Optional stereo feed",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required for this role",
+      "source": "MIDI + optional external audio",
+      "destination": "Effects chain / stereo out",
+      "note": "Use MIDI to play the instrument; route external audio in when the sound calls for excitation or processing."
+    }
+  },
+  {
+    "id": "blofeld",
+    "name": "Waldorf Blofeld",
+    "category": "Instruments",
+    "description": "Oscillators, dual filters, envelopes, and modulation.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Tone",
+            "controls": [
+              "Filter 1 cutoff",
+              "Filter 1 resonance",
+              "Filter 2 cutoff",
+              "Filter 2 resonance"
+            ]
+          },
+          {
+            "name": "Oscillators",
+            "controls": [
+              "Osc 1 shape",
+              "Osc 2 shape",
+              "Osc 3 shape",
+              "Noise level"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Amp attack",
+              "Amp decay",
+              "Amp sustain",
+              "Amp release"
+            ]
+          },
+          {
+            "name": "Motion / level",
+            "controls": [
+              "LFO 1 speed",
+              "Filter env amount",
+              "Drive",
+              "Output"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oscillators",
+        "rows": [
+          {
+            "name": "Osc 1",
+            "controls": [
+              "Osc 1 shape",
+              "Osc 1 octave",
+              "Osc 1 detune",
+              "Osc 1 width"
+            ]
+          },
+          {
+            "name": "Osc 2",
+            "controls": [
+              "Osc 2 shape",
+              "Osc 2 octave",
+              "Osc 2 detune",
+              "Osc 2 width"
+            ]
+          },
+          {
+            "name": "Osc 3",
+            "controls": [
+              "Osc 3 shape",
+              "Osc 3 octave",
+              "Osc 3 detune",
+              "Osc 3 width"
+            ]
+          },
+          {
+            "name": "Mixer",
+            "controls": [
+              "Osc 1 level",
+              "Osc 2 level",
+              "Osc 3 level",
+              "Noise level"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Filters",
+        "rows": [
+          {
+            "name": "Filter 1",
+            "controls": [
+              "Filter 1 type",
+              "Filter 1 cutoff",
+              "Filter 1 resonance",
+              "Filter 1 drive"
+            ]
+          },
+          {
+            "name": "Filter 2",
+            "controls": [
+              "Filter 2 type",
+              "Filter 2 cutoff",
+              "Filter 2 resonance",
+              "Filter 2 drive"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Filter 1 env amount",
+              "Filter 1 env velocity",
+              "Filter 2 env amount",
+              "Filter 2 env velocity"
+            ]
+          },
+          {
+            "name": "FM",
+            "controls": [
+              "Filter 1 FM source",
+              "Filter 1 FM amount",
+              "Filter 2 FM source",
+              "Filter 2 FM amount"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Envelopes",
+        "rows": [
+          {
+            "name": "Filter",
+            "controls": [
+              "Filter attack",
+              "Filter decay",
+              "Filter sustain",
+              "Filter release"
+            ]
+          },
+          {
+            "name": "Amp",
+            "controls": [
+              "Amp attack",
+              "Amp decay",
+              "Amp sustain",
+              "Amp release"
+            ]
+          },
+          {
+            "name": "Envelope 3",
+            "controls": [
+              "Env 3 attack",
+              "Env 3 decay",
+              "Env 3 sustain",
+              "Env 3 release"
+            ]
+          },
+          {
+            "name": "Envelope 4",
+            "controls": [
+              "Env 4 attack",
+              "Env 4 decay",
+              "Env 4 sustain",
+              "Env 4 release"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "LFOs",
+        "rows": [
+          {
+            "name": "LFO 1",
+            "controls": [
+              "LFO 1 shape",
+              "LFO 1 speed",
+              "LFO 1 phase",
+              "LFO 1 delay"
+            ]
+          },
+          {
+            "name": "LFO 2",
+            "controls": [
+              "LFO 2 shape",
+              "LFO 2 speed",
+              "LFO 2 phase",
+              "LFO 2 delay"
+            ]
+          },
+          {
+            "name": "LFO 3",
+            "controls": [
+              "LFO 3 shape",
+              "LFO 3 speed",
+              "LFO 3 phase",
+              "LFO 3 delay"
+            ]
+          },
+          {
+            "name": "Sync",
+            "controls": [
+              "LFO 1 sync",
+              "LFO 2 sync",
+              "LFO 3 sync",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mod matrix",
+        "rows": [
+          {
+            "name": "Route 1",
+            "controls": [
+              "Route 1 source",
+              "Route 1 destination",
+              "Route 1 amount",
+              null
+            ]
+          },
+          {
+            "name": "Route 2",
+            "controls": [
+              "Route 2 source",
+              "Route 2 destination",
+              "Route 2 amount",
+              null
+            ]
+          },
+          {
+            "name": "Route 3",
+            "controls": [
+              "Route 3 source",
+              "Route 3 destination",
+              "Route 3 amount",
+              null
+            ]
+          },
+          {
+            "name": "Route 4",
+            "controls": [
+              "Route 4 source",
+              "Route 4 destination",
+              "Route 4 amount",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mixer & pitch",
+        "rows": [
+          {
+            "name": "Levels",
+            "controls": [
+              "Osc 1 level",
+              "Osc 2 level",
+              "Osc 3 level",
+              "Ring-mod level"
+            ]
+          },
+          {
+            "name": "Balance",
+            "controls": [
+              "Osc 1 balance",
+              "Osc 2 balance",
+              "Osc 3 balance",
+              "Ring-mod balance"
+            ]
+          },
+          {
+            "name": "Noise / amp",
+            "controls": [
+              "Noise level",
+              "Noise colour",
+              "Amp volume",
+              "Amp velocity"
+            ]
+          },
+          {
+            "name": "Pitch",
+            "controls": [
+              "Osc 1 semitone",
+              "Osc 2 semitone",
+              "Osc 3 semitone",
+              "Pitch-bend range"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "The matrix layout repeats for additional routes. This is a practical first-pass map, not an exhaustive editor.",
+    "io": {
+      "role": "MIDI instrument",
+      "audioIn": "None required",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required",
+      "source": "Push / OXI / Tracker · MIDI",
+      "destination": "Effects chain / stereo out",
+      "note": "Keep notes addressed to the intended unit. Its audio feeds a Zynthian chain and mixer before the shared output."
+    }
+  },
+  {
+    "id": "sc88",
+    "name": "Roland SC-88 Pro",
+    "category": "Instruments",
+    "description": "A multitimbral sound module for sequenced parts.",
+    "pages": [
+      {
+        "name": "Part performance",
+        "rows": [
+          {
+            "name": "Part",
+            "controls": [
+              "Selected part",
+              "Tone / program",
+              "Variation bank",
+              "Part level"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Pan",
+              "Expression",
+              "Mod wheel",
+              "Pitch bend"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Brightness",
+              "Resonance",
+              "Attack",
+              "Release"
+            ]
+          },
+          {
+            "name": "Effects",
+            "controls": [
+              "Reverb send",
+              "Chorus send",
+              "Delay send",
+              "Output"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mixer 1–16",
+        "rows": [
+          {
+            "name": "Parts 1–4",
+            "controls": [
+              "Part 1 level",
+              "Part 2 level",
+              "Part 3 level",
+              "Part 4 level"
+            ]
+          },
+          {
+            "name": "Parts 5–8",
+            "controls": [
+              "Part 5 level",
+              "Part 6 level",
+              "Part 7 level",
+              "Part 8 level"
+            ]
+          },
+          {
+            "name": "Parts 9–12",
+            "controls": [
+              "Part 9 level",
+              "Part 10 level",
+              "Part 11 level",
+              "Part 12 level"
+            ]
+          },
+          {
+            "name": "Parts 13–16",
+            "controls": [
+              "Part 13 level",
+              "Part 14 level",
+              "Part 15 level",
+              "Part 16 level"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Mixer 17–32",
+        "rows": [
+          {
+            "name": "Parts 17–20",
+            "controls": [
+              "Part 17 level",
+              "Part 18 level",
+              "Part 19 level",
+              "Part 20 level"
+            ]
+          },
+          {
+            "name": "Parts 21–24",
+            "controls": [
+              "Part 21 level",
+              "Part 22 level",
+              "Part 23 level",
+              "Part 24 level"
+            ]
+          },
+          {
+            "name": "Parts 25–28",
+            "controls": [
+              "Part 25 level",
+              "Part 26 level",
+              "Part 27 level",
+              "Part 28 level"
+            ]
+          },
+          {
+            "name": "Parts 29–32",
+            "controls": [
+              "Part 29 level",
+              "Part 30 level",
+              "Part 31 level",
+              "Part 32 level"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Part shape",
+        "rows": [
+          {
+            "name": "Envelope",
+            "controls": [
+              "Attack",
+              "Decay",
+              "Release",
+              null
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Brightness",
+              "Resonance",
+              "Vibrato rate",
+              "Vibrato depth"
+            ]
+          },
+          {
+            "name": "Pitch",
+            "controls": [
+              "Coarse tune",
+              "Fine tune",
+              "Pitch-bend range",
+              null
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Part level",
+              "Pan",
+              "Reverb send",
+              "Chorus send"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Part pages follow the selected part. Mixer pages give each part its own level control.",
+    "io": {
+      "role": "MIDI instrument",
+      "audioIn": "None required",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required",
+      "source": "Push / OXI / Tracker · MIDI",
+      "destination": "Effects chain / stereo out",
+      "note": "Keep notes addressed to the intended unit. Its audio feeds a Zynthian chain and mixer before the shared output."
+    }
+  },
+  {
+    "id": "eaganmatrix",
+    "name": "Haken EaganMatrix",
+    "category": "Instruments",
+    "description": "Expressive presets with a patch-specific macro surface.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Expression",
+            "controls": [
+              "Pressure",
+              "Timbre / Y",
+              "Pitch bend",
+              "Expression amount"
+            ]
+          },
+          {
+            "name": "Patch macros",
+            "controls": [
+              "Macro 1",
+              "Macro 2",
+              "Macro 3",
+              "Macro 4"
+            ]
+          },
+          {
+            "name": "Patch macros",
+            "controls": [
+              "Macro 5",
+              "Macro 6",
+              "Macro 7",
+              "Macro 8"
+            ]
+          },
+          {
+            "name": "Balance",
+            "controls": [
+              "Input level",
+              "Effects mix",
+              "Stereo width",
+              "Output"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Expression",
+        "rows": [
+          {
+            "name": "Response",
+            "controls": [
+              "Pressure curve",
+              "Pressure depth",
+              "Timbre depth",
+              "Pitch-bend range"
+            ]
+          },
+          {
+            "name": "Playing",
+            "controls": [
+              "Glide",
+              "Velocity depth",
+              "Release behavior",
+              "MIDI expression mode"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Patch macros",
+        "rows": [
+          {
+            "name": "Macros 1–4",
+            "controls": [
+              "Patch macro 1",
+              "Patch macro 2",
+              "Patch macro 3",
+              "Patch macro 4"
+            ]
+          },
+          {
+            "name": "Macros 5–8",
+            "controls": [
+              "Patch macro 5",
+              "Patch macro 6",
+              "Patch macro 7",
+              "Patch macro 8"
+            ]
+          },
+          {
+            "name": "Macros 9–12",
+            "controls": [
+              "Patch macro 9",
+              "Patch macro 10",
+              "Patch macro 11",
+              "Patch macro 12"
+            ]
+          },
+          {
+            "name": "Macros 13–16",
+            "controls": [
+              "Patch macro 13",
+              "Patch macro 14",
+              "Patch macro 15",
+              "Patch macro 16"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Macro names should come from the loaded patch. These are proposed assignments; a universal set of synthesis controls would hide what makes each patch different.",
+    "io": {
+      "role": "Instrument + audio input",
+      "audioIn": "Optional stereo feed",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required for this role",
+      "source": "MIDI + optional external audio",
+      "destination": "Effects chain / stereo out",
+      "note": "Treat the preset as an expressive instrument first. Audio input is optional and depends on the chosen patch."
+    }
+  },
+  {
+    "id": "virus",
+    "name": "Access Virus",
+    "category": "Instruments",
+    "description": "A shared starting layout for the Virus family.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Tone",
+            "controls": [
+              "Cutoff",
+              "Resonance",
+              "Filter balance",
+              "Saturation"
+            ]
+          },
+          {
+            "name": "Oscillators",
+            "controls": [
+              "Osc balance",
+              "Detune",
+              "Sub level",
+              "Noise level"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Amp attack",
+              "Amp decay",
+              "Amp sustain",
+              "Amp release"
+            ]
+          },
+          {
+            "name": "Motion / space",
+            "controls": [
+              "LFO rate",
+              "Mod amount",
+              "Effects mix",
+              "Output"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Oscillators",
+        "rows": [
+          {
+            "name": "Osc 1",
+            "controls": [
+              "Osc 1 shape",
+              "Osc 1 wave",
+              "Osc 1 semitone",
+              "Osc 1 pulse width"
+            ]
+          },
+          {
+            "name": "Osc 2",
+            "controls": [
+              "Osc 2 shape",
+              "Osc 2 wave",
+              "Osc 2 semitone",
+              "Osc 2 detune"
+            ]
+          },
+          {
+            "name": "Interaction",
+            "controls": [
+              "FM amount",
+              "Sync",
+              "Ring-mod level",
+              "Osc balance"
+            ]
+          },
+          {
+            "name": "Layers",
+            "controls": [
+              "Sub level",
+              "Noise level",
+              "Unison voices",
+              "Unison detune"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Filters",
+        "rows": [
+          {
+            "name": "Filter 1",
+            "controls": [
+              "Filter 1 type",
+              "Filter 1 cutoff",
+              "Filter 1 resonance",
+              "Filter 1 env amount"
+            ]
+          },
+          {
+            "name": "Filter 2",
+            "controls": [
+              "Filter 2 type",
+              "Filter 2 cutoff",
+              "Filter 2 resonance",
+              "Filter 2 env amount"
+            ]
+          },
+          {
+            "name": "Routing",
+            "controls": [
+              "Filter routing",
+              "Filter balance",
+              "Saturation type",
+              "Saturation amount"
+            ]
+          },
+          {
+            "name": "Tracking",
+            "controls": [
+              "Filter 1 keytrack",
+              "Filter 2 keytrack",
+              "Velocity depth",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Envelopes",
+        "rows": [
+          {
+            "name": "Amp",
+            "controls": [
+              "Amp attack",
+              "Amp decay",
+              "Amp sustain",
+              "Amp release"
+            ]
+          },
+          {
+            "name": "Filter",
+            "controls": [
+              "Filter attack",
+              "Filter decay",
+              "Filter sustain",
+              "Filter release"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Modulation",
+        "rows": [
+          {
+            "name": "LFO 1",
+            "controls": [
+              "LFO 1 rate",
+              "LFO 1 shape",
+              "LFO 1 amount",
+              "LFO 1 destination"
+            ]
+          },
+          {
+            "name": "LFO 2",
+            "controls": [
+              "LFO 2 rate",
+              "LFO 2 shape",
+              "LFO 2 amount",
+              "LFO 2 destination"
+            ]
+          },
+          {
+            "name": "Route 1",
+            "controls": [
+              "Mod source 1",
+              "Mod destination 1",
+              "Mod amount 1",
+              null
+            ]
+          },
+          {
+            "name": "Route 2",
+            "controls": [
+              "Mod source 2",
+              "Mod destination 2",
+              "Mod amount 2",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Effects",
+        "rows": [
+          {
+            "name": "Chorus",
+            "controls": [
+              "Chorus rate",
+              "Chorus depth",
+              "Chorus feedback",
+              "Chorus mix"
+            ]
+          },
+          {
+            "name": "Delay",
+            "controls": [
+              "Delay time",
+              "Delay feedback",
+              "Delay colour",
+              "Delay mix"
+            ]
+          },
+          {
+            "name": "Reverb",
+            "controls": [
+              "Reverb size",
+              "Reverb decay",
+              "Reverb tone",
+              "Reverb mix"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Family-level proposal. Keep model-specific features in extra pages rather than changing the shared layout.",
+    "io": {
+      "role": "MIDI instrument",
+      "audioIn": "None required",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required",
+      "source": "Push / OXI / Tracker · MIDI",
+      "destination": "Effects chain / stereo out",
+      "note": "Keep notes addressed to the intended unit. Its audio feeds a Zynthian chain and mixer before the shared output."
+    }
+  },
+  {
+    "id": "emu-vintage",
+    "name": "E-mu Vintage Keys",
+    "category": "Instruments",
+    "description": "Vintage keyboard layers and performance shaping.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Sound",
+            "controls": [
+              "Primary instrument",
+              "Secondary instrument",
+              "Layer balance",
+              "Output"
+            ]
+          },
+          {
+            "name": "Pitch",
+            "controls": [
+              "Coarse tune",
+              "Fine tune",
+              "Transpose",
+              "Glide"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Attack",
+              "Decay",
+              "Sustain",
+              "Release"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Pan",
+              "Velocity depth",
+              "Mod-wheel depth",
+              "Pressure depth"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Layers",
+        "rows": [
+          {
+            "name": "Primary",
+            "controls": [
+              "Primary instrument",
+              "Primary level",
+              "Primary pan",
+              "Primary tuning"
+            ]
+          },
+          {
+            "name": "Secondary",
+            "controls": [
+              "Secondary instrument",
+              "Secondary level",
+              "Secondary pan",
+              "Secondary tuning"
+            ]
+          },
+          {
+            "name": "Split",
+            "controls": [
+              "Key split",
+              "Velocity split",
+              "Crossfade amount",
+              "Crossfade direction"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Modulation",
+        "rows": [
+          {
+            "name": "LFO 1",
+            "controls": [
+              "LFO 1 rate",
+              "LFO 1 shape",
+              "LFO 1 amount",
+              "LFO 1 destination"
+            ]
+          },
+          {
+            "name": "LFO 2",
+            "controls": [
+              "LFO 2 rate",
+              "LFO 2 shape",
+              "LFO 2 amount",
+              "LFO 2 destination"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Velocity amount",
+              "Pressure amount",
+              "Mod-wheel amount",
+              "Pitch-bend range"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Proposed family layout. Keep only the controls supported by the individual model.",
+    "io": {
+      "role": "MIDI instrument",
+      "audioIn": "None required",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required",
+      "source": "Push / OXI / Tracker · MIDI",
+      "destination": "Effects chain / stereo out",
+      "note": "Keep notes addressed to the intended unit. Its audio feeds a Zynthian chain and mixer before the shared output."
+    }
+  },
+  {
+    "id": "emu-orbit",
+    "name": "E-mu Orbit 9090",
+    "category": "Instruments",
+    "description": "Dance-oriented tones, layers, and rhythmic modulation.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Sound",
+            "controls": [
+              "Primary instrument",
+              "Secondary instrument",
+              "Layer balance",
+              "Output"
+            ]
+          },
+          {
+            "name": "Pitch",
+            "controls": [
+              "Coarse tune",
+              "Fine tune",
+              "Transpose",
+              "Glide"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Attack",
+              "Decay",
+              "Sustain",
+              "Release"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Pan",
+              "Velocity depth",
+              "Mod-wheel depth",
+              "Pressure depth"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Layers",
+        "rows": [
+          {
+            "name": "Primary",
+            "controls": [
+              "Primary instrument",
+              "Primary level",
+              "Primary pan",
+              "Primary tuning"
+            ]
+          },
+          {
+            "name": "Secondary",
+            "controls": [
+              "Secondary instrument",
+              "Secondary level",
+              "Secondary pan",
+              "Secondary tuning"
+            ]
+          },
+          {
+            "name": "Split",
+            "controls": [
+              "Key split",
+              "Velocity split",
+              "Crossfade amount",
+              "Crossfade direction"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Modulation",
+        "rows": [
+          {
+            "name": "LFO 1",
+            "controls": [
+              "LFO 1 rate",
+              "LFO 1 shape",
+              "LFO 1 amount",
+              "LFO 1 destination"
+            ]
+          },
+          {
+            "name": "LFO 2",
+            "controls": [
+              "LFO 2 rate",
+              "LFO 2 shape",
+              "LFO 2 amount",
+              "LFO 2 destination"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Velocity amount",
+              "Pressure amount",
+              "Mod-wheel amount",
+              "Pitch-bend range"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Proposed family layout. Keep only the controls supported by the individual model.",
+    "io": {
+      "role": "MIDI instrument",
+      "audioIn": "None required",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required",
+      "source": "Push / OXI / Tracker · MIDI",
+      "destination": "Effects chain / stereo out",
+      "note": "Keep notes addressed to the intended unit. Its audio feeds a Zynthian chain and mixer before the shared output."
+    }
+  },
+  {
+    "id": "emu-phatt",
+    "name": "E-mu Planet Phatt",
+    "category": "Instruments",
+    "description": "Bass, drums, and sample-based performance parts.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Sound",
+            "controls": [
+              "Primary instrument",
+              "Secondary instrument",
+              "Layer balance",
+              "Output"
+            ]
+          },
+          {
+            "name": "Pitch",
+            "controls": [
+              "Coarse tune",
+              "Fine tune",
+              "Transpose",
+              "Glide"
+            ]
+          },
+          {
+            "name": "Envelope",
+            "controls": [
+              "Attack",
+              "Decay",
+              "Sustain",
+              "Release"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Pan",
+              "Velocity depth",
+              "Mod-wheel depth",
+              "Pressure depth"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Layers",
+        "rows": [
+          {
+            "name": "Primary",
+            "controls": [
+              "Primary instrument",
+              "Primary level",
+              "Primary pan",
+              "Primary tuning"
+            ]
+          },
+          {
+            "name": "Secondary",
+            "controls": [
+              "Secondary instrument",
+              "Secondary level",
+              "Secondary pan",
+              "Secondary tuning"
+            ]
+          },
+          {
+            "name": "Split",
+            "controls": [
+              "Key split",
+              "Velocity split",
+              "Crossfade amount",
+              "Crossfade direction"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Modulation",
+        "rows": [
+          {
+            "name": "LFO 1",
+            "controls": [
+              "LFO 1 rate",
+              "LFO 1 shape",
+              "LFO 1 amount",
+              "LFO 1 destination"
+            ]
+          },
+          {
+            "name": "LFO 2",
+            "controls": [
+              "LFO 2 rate",
+              "LFO 2 shape",
+              "LFO 2 amount",
+              "LFO 2 destination"
+            ]
+          },
+          {
+            "name": "Expression",
+            "controls": [
+              "Velocity amount",
+              "Pressure amount",
+              "Mod-wheel amount",
+              "Pitch-bend range"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Proposed family layout. Keep only the controls supported by the individual model.",
+    "io": {
+      "role": "MIDI instrument",
+      "audioIn": "None required",
+      "audioOut": "Stereo audio",
+      "midiIn": "Notes + expression",
+      "midiOut": "None required",
+      "source": "Push / OXI / Tracker · MIDI",
+      "destination": "Effects chain / stereo out",
+      "note": "Keep notes addressed to the intended unit. Its audio feeds a Zynthian chain and mixer before the shared output."
+    }
+  },
+  {
+    "id": "microcosm",
+    "name": "Hologram Microcosm",
+    "category": "Texture & looping",
+    "description": "Granular movement, looping, and ambient space.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Texture",
+            "controls": [
+              "Algorithm",
+              "Activity",
+              "Shape",
+              "Filter"
+            ]
+          },
+          {
+            "name": "Time",
+            "controls": [
+              "Time / subdivision",
+              "Repeats",
+              "Tempo",
+              "Space"
+            ]
+          },
+          {
+            "name": "Blend",
+            "controls": [
+              "Dry / wet",
+              "Loop level",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Looper",
+        "rows": [
+          {
+            "name": "Capture",
+            "controls": [
+              "Record",
+              "Overdub",
+              "Play / stop",
+              "Clear loop"
+            ]
+          },
+          {
+            "name": "Playback",
+            "controls": [
+              "Loop level",
+              "Loop speed",
+              "Reverse",
+              "Loop routing"
+            ]
+          },
+          {
+            "name": "Blend",
+            "controls": [
+              "Dry / wet",
+              "Space",
+              "Filter",
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Looper actions are proposed performance assignments; they can use buttons or footswitches beside the knobs.",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "mood",
+    "name": "Chase Bliss MOOD",
+    "category": "Texture & looping",
+    "description": "Two linked worlds: wet effects and a micro-loop.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Wet side",
+            "controls": [
+              "Wet mode",
+              "Time",
+              "Wet modify",
+              "Freeze wet"
+            ]
+          },
+          {
+            "name": "Loop side",
+            "controls": [
+              "Loop mode",
+              "Loop length",
+              "Loop modify",
+              "Capture loop"
+            ]
+          },
+          {
+            "name": "Blend",
+            "controls": [
+              "Dry / wet",
+              "Wet / loop balance",
+              "Tone",
+              "Output"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Clock",
+              "Smooth clock",
+              "Stereo width",
+              "Overdub"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Wet & routing",
+        "rows": [
+          {
+            "name": "Wet side",
+            "controls": [
+              "Wet mode",
+              "Time",
+              "Wet modify",
+              "Wet enabled"
+            ]
+          },
+          {
+            "name": "Routing",
+            "controls": [
+              "Wet input",
+              "Internal sync",
+              "Spread",
+              "Direct loop"
+            ]
+          },
+          {
+            "name": "Character",
+            "controls": [
+              "Tone",
+              "Freeze wet",
+              "Classic",
+              "Trails"
+            ]
+          },
+          {
+            "name": "Output",
+            "controls": [
+              "Dry / wet",
+              "Wet / loop balance",
+              "Stereo width",
+              "Output"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Micro-loop",
+        "rows": [
+          {
+            "name": "Loop",
+            "controls": [
+              "Loop mode",
+              "Loop length",
+              "Loop modify",
+              "Loop fade"
+            ]
+          },
+          {
+            "name": "Capture",
+            "controls": [
+              "Capture loop",
+              "Overdub",
+              "Half buffer",
+              "No recirculation"
+            ]
+          },
+          {
+            "name": "Clock",
+            "controls": [
+              "Clock",
+              "Smooth clock",
+              "Internal sync",
+              "Direct loop"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "counttofive",
+    "name": "Count to Five",
+    "category": "Texture & looping",
+    "description": "Three personalities: delay, random slices, and three heads.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Main",
+            "controls": [
+              "Mode",
+              "DIR 1",
+              "Length / DIR 2",
+              "Feedback / random / DIR 3"
+            ]
+          },
+          {
+            "name": "Pitch / mix",
+            "controls": [
+              "Pitch quantization",
+              "Playback heads",
+              "Mix",
+              "Output gain"
+            ]
+          },
+          {
+            "name": "Capture",
+            "controls": [
+              "Freeze / record",
+              "Clear loop",
+              "Trigger",
+              "Transcendence"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Delay",
+        "rows": [
+          {
+            "name": "Delay",
+            "controls": [
+              "DIR 1",
+              "Buffer length",
+              "Feedback",
+              "Feedback filter"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "LFO rate",
+              "LFO depth",
+              "Trigger threshold",
+              "Trigger position"
+            ]
+          },
+          {
+            "name": "Performance",
+            "controls": [
+              "Freeze",
+              "Trigger",
+              "Mix",
+              "Output gain"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Slices",
+        "rows": [
+          {
+            "name": "Slices",
+            "controls": [
+              "Direction / speed",
+              "Slice length",
+              "Random start range",
+              "Pitch quantization"
+            ]
+          },
+          {
+            "name": "Capture",
+            "controls": [
+              "Record",
+              "Clear loop",
+              "Transcendence",
+              null
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Mix",
+              "Output gain",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Three heads",
+        "rows": [
+          {
+            "name": "Speed",
+            "controls": [
+              "Head 1 speed",
+              "Head 2 speed",
+              "Head 3 speed",
+              "Pitch quantization"
+            ]
+          },
+          {
+            "name": "Levels",
+            "controls": [
+              "Head 1 level",
+              "Head 2 level",
+              "Head 3 level",
+              "Playback heads"
+            ]
+          },
+          {
+            "name": "Variation",
+            "controls": [
+              "Step rate",
+              "Step variation",
+              "Stepped heads",
+              null
+            ]
+          },
+          {
+            "name": "Capture / mix",
+            "controls": [
+              "Record / overdub",
+              "Clear loop",
+              "Mix",
+              "Output gain"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "The section names make the mode-dependent knob meanings explicit.",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "thyme",
+    "name": "Bastl THYME",
+    "category": "Texture & looping",
+    "description": "Four taps, tape-like speed changes, and feedback.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Time",
+            "controls": [
+              "Tap 1 time",
+              "Tap 2 time",
+              "Tap 3 time",
+              "Tap 4 time"
+            ]
+          },
+          {
+            "name": "Levels",
+            "controls": [
+              "Tap 1 level",
+              "Tap 2 level",
+              "Tap 3 level",
+              "Tap 4 level"
+            ]
+          },
+          {
+            "name": "Character",
+            "controls": [
+              "Speed",
+              "Feedback",
+              "Filter",
+              "Freeze"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry / wet",
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Robots",
+        "rows": [
+          {
+            "name": "Robot 1",
+            "controls": [
+              "Robot 1 target",
+              "Robot 1 rate",
+              "Robot 1 depth",
+              "Robot 1 shape"
+            ]
+          },
+          {
+            "name": "Robot 2",
+            "controls": [
+              "Robot 2 target",
+              "Robot 2 rate",
+              "Robot 2 depth",
+              "Robot 2 shape"
+            ]
+          },
+          {
+            "name": "Robot 3",
+            "controls": [
+              "Robot 3 target",
+              "Robot 3 rate",
+              "Robot 3 depth",
+              "Robot 3 shape"
+            ]
+          },
+          {
+            "name": "Robot 4",
+            "controls": [
+              "Robot 4 target",
+              "Robot 4 rate",
+              "Robot 4 depth",
+              "Robot 4 shape"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Robots are a proposed future macro page. Keep the direct delay controls together on the first page.",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "parting",
+    "name": "OBNE Parting",
+    "category": "Texture & looping",
+    "description": "Glitch, smear, modulation, and dissolving repeats.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Texture",
+            "controls": [
+              "Dissolve",
+              "Chance",
+              "Smear",
+              "Glitch"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Rate",
+              "Depth",
+              "Shape",
+              "Time"
+            ]
+          },
+          {
+            "name": "Tone / space",
+            "controls": [
+              "Filter",
+              "Width",
+              "Effect mix",
+              "Volume"
+            ]
+          },
+          {
+            "name": "Switches",
+            "controls": [
+              "Vibrato",
+              "High-pass",
+              "Half-speed",
+              "Modified mix"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Timing & mix",
+        "rows": [
+          {
+            "name": "Timing",
+            "controls": [
+              "Rate",
+              "Rate subdivision",
+              "Time",
+              "Time subdivision"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Depth",
+              "Shape",
+              "Vibrato",
+              "Half-speed"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Effect mix",
+              "Overall dry / wet",
+              "Volume",
+              "Bypass"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "volante",
+    "name": "Strymon Volante",
+    "category": "Delay",
+    "description": "A tape machine with four hands-on playback heads.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Machine",
+            "controls": [
+              "Machine type",
+              "Speed",
+              "Time",
+              "Repeats"
+            ]
+          },
+          {
+            "name": "Character",
+            "controls": [
+              "Record level",
+              "Echo level",
+              "Mechanics",
+              "Wear"
+            ]
+          },
+          {
+            "name": "Space",
+            "controls": [
+              "Low cut",
+              "Head spacing",
+              "Spring level",
+              "Spring decay"
+            ]
+          },
+          {
+            "name": "Output",
+            "controls": [
+              "Dry / wet",
+              "Output",
+              null,
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Heads",
+        "rows": [
+          {
+            "name": "Level",
+            "controls": [
+              "Head 1 level",
+              "Head 2 level",
+              "Head 3 level",
+              "Head 4 level"
+            ]
+          },
+          {
+            "name": "Pan",
+            "controls": [
+              "Head 1 pan",
+              "Head 2 pan",
+              "Head 3 pan",
+              "Head 4 pan"
+            ]
+          },
+          {
+            "name": "Feedback",
+            "controls": [
+              "Head 1 feedback",
+              "Head 2 feedback",
+              "Head 3 feedback",
+              "Head 4 feedback"
+            ]
+          },
+          {
+            "name": "Timing",
+            "controls": [
+              "Time",
+              "Head spacing",
+              "Repeats",
+              "Speed"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "black-delay",
+    "name": "Erica Black Stereo Delay 2",
+    "category": "Delay",
+    "description": "Stereo echoes with modulation and flexible routing.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Echo",
+            "controls": [
+              "Time",
+              "Spread",
+              "Feedback",
+              "Mode"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Rate",
+              "Depth",
+              "Tone",
+              "Routing"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry",
+              "Wet",
+              "Bypass",
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "echolocator",
+    "name": "Erica Echolocator",
+    "category": "Delay",
+    "description": "Orbiting stereo echoes with pitch and shimmer.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Echo",
+            "controls": [
+              "Time",
+              "Feedback",
+              "Orbit",
+              "Ping-pong"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Filter cutoff",
+              "Filter Q",
+              "Dirty",
+              "Reverb"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Mod speed",
+              "Mod depth",
+              "Pitch shift",
+              "Shimmer"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry / wet",
+              "Freeze",
+              "Compressor",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Character",
+        "rows": [
+          {
+            "name": "Filter",
+            "controls": [
+              "Filter cutoff",
+              "Filter Q",
+              "Filter mode",
+              "Dirty"
+            ]
+          },
+          {
+            "name": "Shimmer",
+            "controls": [
+              "Pitch shift",
+              "Shimmer",
+              "Shimmer mode",
+              "Shimmer style"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Mod speed",
+              "Mod depth",
+              "Orbit",
+              "Ping-pong"
+            ]
+          },
+          {
+            "name": "Space",
+            "controls": [
+              "Reverb",
+              "Feedback",
+              "Freeze",
+              "Dry / wet"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "zen-delay",
+    "name": "Erica Zen Delay",
+    "category": "Delay",
+    "description": "A compact delay page with room to breathe.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Echo",
+            "controls": [
+              "Time",
+              "Feedback",
+              "Mode",
+              "Vintage resolution"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry / wet",
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Leave unused positions open. The first page focuses on delay; additional tone shaping can sit in a separate effect.",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "nightsky",
+    "name": "Strymon NightSky",
+    "category": "Space & modulation",
+    "description": "Reverb as an instrument: pitch, harmonics, and motion.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Reverb",
+            "controls": [
+              "Decay",
+              "Size / pitch",
+              "Texture",
+              "Mix"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Low cut",
+              "High cut",
+              "Filter resonance",
+              "Filter mode"
+            ]
+          },
+          {
+            "name": "Harmonics",
+            "controls": [
+              "Shimmer",
+              "Shimmer interval",
+              "Glimmer",
+              "Glimmer gain"
+            ]
+          },
+          {
+            "name": "Drive / motion",
+            "controls": [
+              "Drive",
+              "Drive position",
+              "Mod depth",
+              "Freeze"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Motion",
+        "rows": [
+          {
+            "name": "Modulation",
+            "controls": [
+              "Mod speed",
+              "Mod depth",
+              "Mod shape",
+              "Mod target"
+            ]
+          },
+          {
+            "name": "Pitch",
+            "controls": [
+              "Size / pitch",
+              "Shimmer interval",
+              "Shimmer",
+              "Freeze"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Filter mode",
+              "Filter resonance",
+              "Low cut",
+              "High cut"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "nightverb",
+    "name": "Erica Nightverb",
+    "category": "Space & modulation",
+    "description": "Large spaces, moving tails, and dynamics.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Space",
+            "controls": [
+              "Pre-delay",
+              "Size",
+              "Shape",
+              "Feedback"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Lo-damp",
+              "Hi-damp",
+              "Bass",
+              "Treble"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Spin",
+              "Stereo",
+              "Shimmer",
+              "Early / late"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry / wet",
+              "Freeze",
+              "Dirty",
+              null
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Dynamics",
+        "rows": [
+          {
+            "name": "Compressor",
+            "controls": [
+              "Comp / gate mode",
+              "Comp threshold",
+              "Comp ratio",
+              "Comp release"
+            ]
+          },
+          {
+            "name": "Gate",
+            "controls": [
+              "Gate threshold",
+              "Gate hold",
+              "Gate release",
+              null
+            ]
+          },
+          {
+            "name": "Space / mix",
+            "controls": [
+              "Early / late",
+              "Feedback",
+              "Dry / wet",
+              "Freeze"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "black-reverb",
+    "name": "Erica Black Stereo Reverb",
+    "category": "Space & modulation",
+    "description": "A direct, single-page stereo reverb.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Space",
+            "controls": [
+              "Size",
+              "Feedback",
+              "Type",
+              "Room"
+            ]
+          },
+          {
+            "name": "Character",
+            "controls": [
+              "Tone",
+              "Spin",
+              "Freeze",
+              null
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry",
+              "Wet",
+              "Bypass",
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "dark-star",
+    "name": "OBNE Dark Star Stereo",
+    "category": "Space & modulation",
+    "description": "Pitch-shifted, crushed, and stretched ambience.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Space",
+            "controls": [
+              "Decay",
+              "Lag",
+              "Multiply",
+              "Spread"
+            ]
+          },
+          {
+            "name": "Texture",
+            "controls": [
+              "Pitch 1",
+              "Pitch 2",
+              "Crush",
+              "Filter"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry / wet",
+              "Volume",
+              "Hold",
+              "Bypass"
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "sunlight",
+    "name": "OBNE Sunlight Stereo",
+    "category": "Space & modulation",
+    "description": "Responsive reverb with a moving, sustained tail.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Space",
+            "controls": [
+              "Input sensitivity",
+              "Decay",
+              "Mix",
+              "Mode"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Rate",
+              "Depth",
+              "Hold",
+              "Stereo width"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Tone",
+              "Output",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Proposed panel-level map; final names can follow the recovered control set.",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "bathing",
+    "name": "OBNE Bathing",
+    "category": "Space & modulation",
+    "description": "A moving stereo texture built around time and modulation.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Time",
+            "controls": [
+              "Time",
+              "Stages",
+              "Feedback",
+              "Dimension"
+            ]
+          },
+          {
+            "name": "Motion",
+            "controls": [
+              "Rate",
+              "Depth",
+              "Shape",
+              "Filter"
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Dry",
+              "Wet",
+              "Bypass",
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "bam",
+    "name": "OTO BAM",
+    "category": "Space & modulation",
+    "description": "Classic digital space with an intentionally small surface.",
+    "pages": [
+      {
+        "name": "Performance",
+        "rows": [
+          {
+            "name": "Space",
+            "controls": [
+              "Algorithm",
+              "Reverb time",
+              "Pre-delay",
+              "Size"
+            ]
+          },
+          {
+            "name": "Tone",
+            "controls": [
+              "Low damping",
+              "High damping",
+              "Input filter",
+              null
+            ]
+          },
+          {
+            "name": "Movement",
+            "controls": [
+              "Chorus amount",
+              "Freeze",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Mix",
+            "controls": [
+              "Input level",
+              "Dry / wet",
+              "Output",
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Proposed musical groups; the final assignments can follow the recovered panel controls.",
+    "io": {
+      "role": "Audio effect",
+      "audioIn": "Audio from source / prior unit",
+      "audioOut": "Audio to next unit / stereo out",
+      "midiIn": "Macro control via Zynthian",
+      "midiOut": "None required",
+      "source": "Push / Tracker audio, or a synth",
+      "destination": "Next effect / shared stereo out",
+      "note": "Place in an audio chain, or use a wet-only return. Keep stereo where the selected effect supports it."
+    }
+  },
+  {
+    "id": "torso",
+    "name": "Torso T-1",
+    "category": "Sequencing & modular",
+    "description": "A generative MIDI companion for the rest of the rig.",
+    "pages": [
+      {
+        "name": "Pattern",
+        "rows": [
+          {
+            "name": "Rhythm",
+            "controls": [
+              "Steps",
+              "Pulses",
+              "Cycles",
+              "Division"
+            ]
+          },
+          {
+            "name": "Notes",
+            "controls": [
+              "Pitch",
+              "Length",
+              "Voicing",
+              "Range"
+            ]
+          },
+          {
+            "name": "Feel",
+            "controls": [
+              "Velocity",
+              "Sustain",
+              "Accent",
+              "Timing"
+            ]
+          },
+          {
+            "name": "Variation",
+            "controls": [
+              "Repeats",
+              "Time",
+              "Scale",
+              "Random"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Track & routing",
+        "rows": [
+          {
+            "name": "Track",
+            "controls": [
+              "Track select",
+              "Channel",
+              "Mute",
+              "Track level / velocity"
+            ]
+          },
+          {
+            "name": "Clock",
+            "controls": [
+              "Tempo",
+              "Follow host transport",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Routing",
+            "controls": [
+              "MIDI input port",
+              "MIDI output port",
+              null,
+              null
+            ]
+          },
+          {
+            "name": "Open",
+            "controls": [
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "The pattern page holds the 16 main musical controls. Track selection and routing get their own page.",
+    "io": {
+      "role": "MIDI sequencer",
+      "audioIn": "None required",
+      "audioOut": "No sound of its own",
+      "midiIn": "Clock + performance controls",
+      "midiOut": "Generated notes · planned",
+      "source": "Clock / controller",
+      "destination": "MIDI instrument, then audio out",
+      "note": "T-1 needs a MIDI route into the receiving instrument. Use Zynthian MIDI-chain routing after implementing and validating the T-1 LV2 output."
+    }
+  },
+  {
+    "id": "zoia",
+    "name": "Empress ZOIA",
+    "category": "Sequencing & modular",
+    "description": "A custom instrument surface for each patch.",
+    "pages": [
+      {
+        "name": "Patch macros",
+        "rows": [
+          {
+            "name": "Macros 1–4",
+            "controls": [
+              "Patch macro 1",
+              "Patch macro 2",
+              "Patch macro 3",
+              "Patch macro 4"
+            ]
+          },
+          {
+            "name": "Macros 5–8",
+            "controls": [
+              "Patch macro 5",
+              "Patch macro 6",
+              "Patch macro 7",
+              "Patch macro 8"
+            ]
+          },
+          {
+            "name": "Macros 9–12",
+            "controls": [
+              "Patch macro 9",
+              "Patch macro 10",
+              "Patch macro 11",
+              "Patch macro 12"
+            ]
+          },
+          {
+            "name": "Macros 13–16",
+            "controls": [
+              "Patch macro 13",
+              "Patch macro 14",
+              "Patch macro 15",
+              "Patch macro 16"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Selected module",
+        "rows": [
+          {
+            "name": "Parameters 1–4",
+            "controls": [
+              "Module parameter 1",
+              "Module parameter 2",
+              "Module parameter 3",
+              "Module parameter 4"
+            ]
+          },
+          {
+            "name": "Parameters 5–8",
+            "controls": [
+              "Module parameter 5",
+              "Module parameter 6",
+              "Module parameter 7",
+              "Module parameter 8"
+            ]
+          },
+          {
+            "name": "Parameters 9–12",
+            "controls": [
+              "Module parameter 9",
+              "Module parameter 10",
+              "Module parameter 11",
+              "Module parameter 12"
+            ]
+          },
+          {
+            "name": "Parameters 13–16",
+            "controls": [
+              "Module parameter 13",
+              "Module parameter 14",
+              "Module parameter 15",
+              "Module parameter 16"
+            ]
+          }
+        ]
+      }
+    ],
+    "note": "Replace generic labels with the patch’s chosen controls. Unused macro and module positions stay blank.",
+    "io": {
+      "role": "Patch-defined instrument / effect",
+      "audioIn": "Depends on patch",
+      "audioOut": "Depends on patch",
+      "midiIn": "Depends on patch",
+      "midiOut": "If patch needs it · planned",
+      "source": "Audio and/or MIDI",
+      "destination": "Audio chain / planned MIDI route",
+      "note": "Label the I/O from the loaded patch. Patches that generate MIDI need validated LV2 output into Zynthian MIDI-chain routing, as T-1 does."
+    }
+  }
+]
+</script>
+<script id="rig-data" type="application/json">
+{
+  "name": "Rig I/O",
+  "rows": [
+    {
+      "name": "Audio in",
+      "controls": [
+        "Input source",
+        "Input mode",
+        "Input trim",
+        "Input mute"
+      ]
+    },
+    {
+      "name": "Audio out",
+      "controls": [
+        "Output destination",
+        "Output trim",
+        "Output balance",
+        "Output mute"
+      ]
+    },
+    {
+      "name": "MIDI",
+      "controls": [
+        "MIDI input",
+        "Note channel",
+        "Control channel",
+        "Clock source"
+      ]
+    },
+    {
+      "name": "Rig recall",
+      "controls": [
+        "Active unit",
+        "Unit bypass",
+        "Rig snapshot",
+        "Scene (ZS3)"
+      ]
+    }
+  ]
+}
+</script>
+<script>
+'use strict';
+const units = JSON.parse(document.getElementById('map-data').textContent);
+const rigPage = JSON.parse(document.getElementById('rig-data').textContent);
+const targetNotes = {
+  surface:'Zynthian hosts the units; Pisound supplies the physical connections. This optional external surface groups 16 controls into four rows of four, which can guide Zynthian parameter pages. Assignments remain proposed.',
+  push:'Each 16-control section becomes two 8-control banks on Push 3. Keep the section name and add A / B.',
+  oxi:'Use these sections to organize OXI macro sets / synth definitions. Keep the names and order; hardware bank sizes come later.',
+  tracker:'Use these sections as a shortlist for each MIDI instrument’s CC assignments. Prioritize the Performance page.'
+};
+const state = {unit:units[0], page:0, target:'surface'};
+const byId = id => document.getElementById(id);
+function visiblePages() { return [...state.unit.pages,rigPage]; }
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+function renderLibrary() {
+  const query = byId('search').value.trim().toLocaleLowerCase();
+  const filtered = units.filter(unit => `${unit.name} ${unit.category} ${unit.description}`.toLocaleLowerCase().includes(query));
+  const fragment = document.createDocumentFragment();
+  let category = '';
+  for (const unit of filtered) {
+    if (category !== unit.category) { category = unit.category; fragment.append(element('div','category',category)); }
+    const button = element('button','unit-button');
+    button.append(element('span','',unit.name),element('small','',String(unit.pages.length).padStart(2,'0')));
+    button.setAttribute('aria-current',String(unit.id === state.unit.id));
+    button.setAttribute('aria-label',`${unit.name}, ${unit.pages.length} ${unit.pages.length === 1 ? 'section' : 'sections'}`);
+    button.addEventListener('click',() => chooseUnit(unit.id));
+    fragment.append(button);
+  }
+  if (!filtered.length) fragment.append(element('p','empty','No matching firmware.'));
+  byId('library').replaceChildren(fragment);
+  byId('unit-count').textContent = `${filtered.length} / ${units.length}`;
+}
+function chooseUnit(id) {
+  const unit = units.find(candidate => candidate.id === id);
+  if (!unit) return;
+  state.unit = unit; state.page = 0;
+  renderLibrary(); renderUnit();
+  byId('announcement').textContent = `${unit.name}. ${unit.pages.length} sections.`;
+}
+function renderUnit() {
+  byId('unit-title').textContent = state.unit.name;
+  byId('unit-category').textContent = state.unit.category;
+  byId('unit-description').textContent = state.unit.description;
+  byId('unit-note').textContent = state.unit.note || '';
+  byId('mobile-unit').value = state.unit.id;
+  byId('all-sections-label').textContent = `View ${state.unit.name} map + shared Rig I/O`;
+  renderRouting(); renderAllPages(); renderPage();
+}
+function renderRouting() {
+  const io = state.unit.io;
+  byId('io-role').textContent = io.role;
+  const ports = [['Audio in',io.audioIn],['Audio out',io.audioOut],['MIDI in',io.midiIn],['MIDI out',io.midiOut]];
+  byId('io-grid').replaceChildren(...ports.map(([label,value]) => {
+    const card = element('dl','io-card');
+    card.append(element('dt','',label),element('dd','',value));
+    return card;
+  }));
+  byId('signal-path').replaceChildren(element('span','',io.source),element('span','signal-link','→'),element('span','signal-unit',state.unit.name),element('span','signal-link','→'),element('span','signal-end',io.destination));
+  byId('routing-note').textContent = io.note;
+}
+function renderPageButtons() {
+  const buttons = visiblePages().map((page,index) => {
+    const shared = page === rigPage;
+    const button = element('button',`page-button${shared ? ' shared-page' : ''}`);
+    button.append(element('span','',shared ? 'RIG' : String(index+1).padStart(2,'0')),document.createTextNode(page.name));
+    button.setAttribute('aria-pressed',String(state.page === index));
+    button.addEventListener('click',() => choosePage(index));
+    return button;
+  });
+  byId('pages').replaceChildren(...buttons);
+}
+function choosePage(index) {
+  if (index < 0 || index >= visiblePages().length) return;
+  state.page = index; renderPage();
+  byId('announcement').textContent = `${state.unit.name}, ${visiblePages()[index].name}`;
+}
+function flattenPage(page) {
+  return page.rows.flatMap(row => row.controls.map(name => ({name,group:row.name})));
+}
+function renderControl(control,index) {
+  const tile = element('div',`control${control.name ? '' : ' unused'}`);
+  const top = element('div','control-top');
+  top.append(element('span','slot',String(index+1).padStart(2,'0')),element('span','control-group',control.name ? control.group : ''));
+  tile.append(top,element('span','control-name',control.name || 'Unassigned'));
+  return tile;
+}
+function renderBank(controls,start,label) {
+  const bank = element('section','bank');
+  const heading = element('h3','bank-label',label);
+  const grid = element('div','control-grid');
+  grid.append(...controls.map((control,index) => renderControl(control,index+start)));
+  bank.append(heading,grid);
+  return bank;
+}
+function renderPage() {
+  const page = visiblePages()[state.page];
+  const controls = flattenPage(page);
+  const assigned = controls.filter(control => control.name).length;
+  renderPageButtons();
+  byId('page-position').textContent = page === rigPage ? 'ZYNTHIAN / SHARED RIG PAGE' : `SECTION ${String(state.page+1).padStart(2,'0')} / ${String(state.unit.pages.length).padStart(2,'0')}`;
+  byId('page-title').textContent = page.name;
+  byId('page-subtitle').textContent = page === rigPage ? '16 proposed controls · shared by all units' : `${assigned} assigned · ${16-assigned} open`;
+  byId('target-note').textContent = targetNotes[state.target];
+  byId('previous').disabled = state.page === 0;
+  byId('next').disabled = state.page === visiblePages().length-1;
+  if (state.target === 'push') {
+    byId('banks').replaceChildren(renderBank(controls.slice(0,8),0,`${page.name} A · controls 01–08`),renderBank(controls.slice(8),8,`${page.name} B · controls 09–16`));
+    return;
+  }
+  const labels = {surface:'16-control page',oxi:'Macro / synth section',tracker:'MIDI instrument control shortlist'};
+  byId('banks').replaceChildren(renderBank(controls,0,labels[state.target]));
+}
+function renderSummaryRow(row,index) {
+  const line = element('div','map-row');
+  line.append(element('span','range',`${index*4+1}–${index*4+4}`),element('span','group',row.name),element('span','',row.controls.map(name => name || '—').join(' · ')));
+  return line;
+}
+function renderSummaryPage(page,index) {
+  const section = element('section','map-section');
+  section.append(element('h3','',`${page === rigPage ? 'Shared' : String(index+1).padStart(2,'0')} / ${page.name}`));
+  section.append(...page.rows.map(renderSummaryRow));
+  return section;
+}
+function renderAllPages() { byId('all-pages').replaceChildren(...visiblePages().map(renderSummaryPage)); }
+byId('search').addEventListener('input',renderLibrary);
+byId('mobile-unit').append(...units.map(unit => {const option = element('option','',unit.name); option.value = unit.id; return option;}));
+byId('mobile-unit').addEventListener('change',event => chooseUnit(event.target.value));
+byId('previous').addEventListener('click',() => choosePage(state.page-1));
+byId('next').addEventListener('click',() => choosePage(state.page+1));
+document.querySelectorAll('[data-target]').forEach(button => button.addEventListener('click',() => {
+  state.target = button.dataset.target;
+  document.querySelectorAll('[data-target]').forEach(item => item.setAttribute('aria-pressed',String(item === button)));
+  renderPage();
+}));
+let wasSummaryOpen = false;
+window.addEventListener('beforeprint',() => {wasSummaryOpen = byId('all-sections').open; byId('all-sections').open = true;});
+window.addEventListener('afterprint',() => {byId('all-sections').open = wasSummaryOpen;});
+byId('print').addEventListener('click',() => window.print());
+renderLibrary(); renderUnit();
+</script>
+</body>
+</html>
