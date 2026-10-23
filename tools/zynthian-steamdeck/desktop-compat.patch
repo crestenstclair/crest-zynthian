@@ -134,6 +134,22 @@ index 52f493e..4354c98 100644
      }
      auto it = find(playerVector.players.begin(), playerVector.players.end(), pPlayer);
      if (it != playerVector.players.end())
+diff --git a/zynlibs/zynmixer/mixer.c b/zynlibs/zynmixer/mixer.c
+index 0fee76c..040b86d 100644
+--- a/zynlibs/zynmixer/mixer.c
++++ b/zynlibs/zynmixer/mixer.c
+@@ -445,7 +445,10 @@ void end() {
+         // Mute output and wait for soft mute to occur before closing link with jack server
+         setLevel(MAX_CHANNELS - 1, 0.0);
+         usleep(100000);
+-        // jack_client_close(g_pJackClient);
++        // Stop callbacks before releasing the buffers they access.
++        jack_deactivate(g_pJackClient);
++        jack_client_close(g_pJackClient);
++        g_pJackClient = NULL;
+     }
+     g_sendEvents = 0;
+     free(pNormalisedBufferA);
 diff --git a/zynlibs/zynmixer/tinyosc.c b/zynlibs/zynmixer/tinyosc.c
 index 0b1238d..c046920 100644
 --- a/zynlibs/zynmixer/tinyosc.c

@@ -65,7 +65,8 @@ drivers are imported only when physical LEDs are initialized, allowing stock
 touchscreen mode to run without Pi SPI libraries. A fullscreen window flag fits
 the standard UI to the Deck display. The title timeout runs on Tk's event loop
 so it cannot keep Python waiting for a closed UI during shutdown. The autoconnect
-JACK client is explicitly closed on shutdown. Native engine algorithms, audio routing decisions and menu
+JACK client is explicitly closed on shutdown, and mixer callbacks stop before
+their audio buffers are released. Native engine algorithms, audio routing decisions and menu
 structure are unchanged.
 
 - Config: `~/.config/zynthian`
