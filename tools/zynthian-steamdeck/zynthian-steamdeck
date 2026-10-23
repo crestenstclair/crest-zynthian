@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+export DBX_CONTAINER_MANAGER=podman
 runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 [[ -S $runtime/pipewire-0 ]] || { echo "No PipeWire socket at $runtime/pipewire-0" >&2; exit 1; }
 logdir=${XDG_STATE_HOME:-$HOME/.local/state}/zynthian

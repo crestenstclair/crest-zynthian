@@ -1,6 +1,7 @@
 #!/bin/bash
 # Run from Steam Deck Desktop Mode as the normal deck user.
 set -euo pipefail
+export DBX_CONTAINER_MANAGER=podman
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 name=zynthian-steamdeck
 image=localhost/zynthian-steamdeck:oram
@@ -9,9 +10,9 @@ image=localhost/zynthian-steamdeck:oram
 for cmd in podman distrobox; do
     command -v "$cmd" >/dev/null || { echo "Missing $cmd. See README.md for the supported Distrobox setup." >&2; exit 1; }
 done
-if [[ -f $here/zynthian-steamdeck-image.tar ]]; then
-    (cd "$here" && sha256sum --check zynthian-steamdeck-image.tar.sha256)
-    podman load --input "$here/zynthian-steamdeck-image.tar"
+if [[ -f $here/zynthian-steamdeck-image.tar.gz ]]; then
+    (cd "$here" && sha256sum --check zynthian-steamdeck-image.tar.gz.sha256)
+    podman load --input "$here/zynthian-steamdeck-image.tar.gz"
 else
     podman build --tag "$image" --file "$here/Containerfile" "$here"
 fi

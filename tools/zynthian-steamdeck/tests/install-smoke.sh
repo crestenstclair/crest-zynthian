@@ -28,7 +28,13 @@ done
 PIPEWIRE_PROPS='{ node.name = zynthian-test-output media.class = Audio/Sink node.always-process = true }' \
     pw-jack /usr/bin/python3 "$here/tests/pipewire-device.py" >"$output/device.log" 2>&1 &
 device_pid=$!
-bash "$bundle/install.sh" >"$output/install.log" 2>&1 || { tail -100 "$output/install.log"; exit 1; }
+timeout 600 bash "$bundle/install.sh" >"$output/install.log" 2>&1 || {
+    tail -100 "$output/install.log"
+    podman logs zynthian-steamdeck >"$output/container.log" 2>&1 || true
+    tail -100 "$output/container.log"
+    df -h .
+    exit 1
+}
 "$HOME/.local/bin/zynthian-steamdeck" --check >"$output/preflight.log" 2>&1 || {
     cat "$output/preflight.log"; exit 1;
 }

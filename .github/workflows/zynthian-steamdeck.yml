@@ -48,9 +48,14 @@ jobs:
         run: |
           mkdir -p bundle
           cp -a tools/zynthian-steamdeck/. bundle/
-          docker save -o bundle/zynthian-steamdeck-image.tar localhost/zynthian-steamdeck:oram
+          docker save localhost/zynthian-steamdeck:oram | gzip -1 > bundle/zynthian-steamdeck-image.tar.gz
           cd bundle
-          sha256sum zynthian-steamdeck-image.tar > zynthian-steamdeck-image.tar.sha256
+          sha256sum zynthian-steamdeck-image.tar.gz > zynthian-steamdeck-image.tar.gz.sha256
+      - name: Release build copies before rootless installation
+        run: |
+          docker buildx prune --all --force
+          docker image rm localhost/zynthian-steamdeck:oram
+          df -h .
       - name: Verify installer and host PipeWire connection through Distrobox
         run: |
           sudo apt-get update
@@ -66,5 +71,5 @@ jobs:
         with:
           name: zynthian-steamdeck-x86_64
           path: bundle/
-          compression-level: 1
+          compression-level: 0
           retention-days: 30

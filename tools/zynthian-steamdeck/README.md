@@ -25,7 +25,8 @@ Do not disable SteamOS read-only mode or install these Ubuntu packages on the ho
 2. In that folder run `bash install.sh` as the normal `deck` user.
 3. Open **Zynthian** in the application menu. Use the stock touchscreen controls.
 
-The installer loads the prebuilt image and creates a user Distrobox container.
+The installer verifies and loads the compressed prebuilt image and creates a user
+Distrobox container using Podman.
 When run from source without the image archive, it builds the same Containerfile
 locally first. Installation needs free space for the archive, image and container;
 allow several GB. The first run of Distrobox may install its user integration.
