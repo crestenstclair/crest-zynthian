@@ -5,6 +5,7 @@ Run in a disposable user directory with JACK dummy or PipeWire test devices.
 Does not substitute fake native libraries or engine implementations.
 """
 import json
+import faulthandler
 import os
 from pathlib import Path
 import sys
@@ -15,6 +16,8 @@ import traceback
 mode = sys.argv[1]
 output = Path(os.environ.get('TEST_OUTPUT', '/results'))
 output.mkdir(parents=True, exist_ok=True)
+faulthandler.enable()
+faulthandler.dump_traceback_later(45, repeat=True)
 sys.argv[0] = os.path.join(os.environ['ZYNTHIAN_UI_DIR'], 'zynthian_main.py')
 os.chdir(os.environ['ZYNTHIAN_UI_DIR'])
 from zyngui import zynthian_gui_config as config
@@ -137,4 +140,5 @@ def ready():
 config.top.after(100, ready)
 config.top.mainloop()
 print(json.dumps(result), flush=True)
+print('Remaining Python threads:', [(t.name, t.daemon) for t in threading.enumerate()], flush=True)
 sys.exit(0 if result['passed'] else 1)

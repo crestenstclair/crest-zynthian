@@ -2,7 +2,7 @@
 
 Native Linux x86-64 packaging of the upstream Zynthian interface, MIDI router,
 sequencer, mixer and sampler. Uses the existing touchscreen interface at
-1280 × 800. No controller mapping, webview or replacement UI.
+1280 × 800 in fullscreen. No controller mapping, webview or replacement UI.
 
 ## Status
 
@@ -62,8 +62,10 @@ Zynthian audio routing expects. Choose speakers, headphones or USB audio as the
 default device in SteamOS. The source patch fixes native printf portability and
 uses Pillow's current name for the same image resampling filter. Physical LED
 drivers are imported only when physical LEDs are initialized, allowing stock
-touchscreen mode to run without Pi SPI libraries. Native engine algorithms,
-routing code and menu structure are unchanged.
+touchscreen mode to run without Pi SPI libraries. A fullscreen window flag fits
+the standard UI to the Deck display. The autoconnect JACK client is explicitly
+closed on shutdown. Native engine algorithms, audio routing decisions and menu
+structure are unchanged.
 
 - Config: `~/.config/zynthian`
 - User presets, snapshots and recordings: `~/.local/share/zynthian`

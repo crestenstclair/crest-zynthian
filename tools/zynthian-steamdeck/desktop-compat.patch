@@ -1,8 +1,29 @@
+diff --git a/zynautoconnect/zynthian_autoconnect.py b/zynautoconnect/zynthian_autoconnect.py
+index 0d6c202..a4644b6 100755
+--- a/zynautoconnect/zynthian_autoconnect.py
++++ b/zynautoconnect/zynthian_autoconnect.py
+@@ -1477,6 +1477,7 @@ def stop():
+ 
+     if jclient:
+         jclient.deactivate()
++        jclient.close()
+         jclient = None
+ 
+ 
 diff --git a/zyngui/zynthian_gui_config.py b/zyngui/zynthian_gui_config.py
-index c871c24..3e67db0 100644
+index c871c24..db7bf83 100644
 --- a/zyngui/zynthian_gui_config.py
 +++ b/zyngui/zynthian_gui_config.py
-@@ -796,7 +796,7 @@ if "zynthian_main.py" in sys.argv[0]:
+@@ -772,6 +772,8 @@ if "zynthian_main.py" in sys.argv[0]:
+         top.geometry(str(display_width)+'x'+str(display_height))
+         top.maxsize(display_width, display_height)
+         top.minsize(display_width, display_height)
++        if get_env_int('ZYNTHIAN_UI_FULLSCREEN', 0):
++            top.attributes('-fullscreen', True)
+ 
+         # Disable cursor for real Zynthian Boxes
+         if force_enable_cursor or wiring_layout == "EMULATOR" or wiring_layout == "TOUCH_ONLY":
+@@ -796,7 +798,7 @@ if "zynthian_main.py" in sys.argv[0]:
          fh2 = int(fh * fw2 / fw)
          nframes = 0
          while pil_frame:
