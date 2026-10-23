@@ -1,0 +1,14 @@
+ARG BASE_IMAGE=localhost/zynthian-steamdeck:oram
+FROM ${BASE_IMAGE}
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    novnc x11vnc python3-aiohttp \
+    && rm -rf /var/lib/apt/lists/*
+COPY . /opt/zynthian-web/
+LABEL org.crest-zynthian.runtime="web"
+ENV HOME=/data USER=ubuntu
+ENV ZYNTHIAN_CONFIG_DIR=/data/config ZYNTHIAN_MY_DATA_DIR=/data/user-data
+ENV ZYNTHIAN_HOST_NAME="Mac / Linux browser runtime"
+USER 1000:1000
+EXPOSE 8765
+CMD ["bash", "/opt/zynthian-web/session.sh"]

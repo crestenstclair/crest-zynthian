@@ -9,6 +9,11 @@ Native Linux x86-64 packaging of the upstream Zynthian interface, MIDI router,
 sequencer, mixer and sampler. Uses the existing touchscreen interface at
 1280 × 800 in fullscreen. No controller mapping, webview or replacement UI.
 
+For macOS, the [browser runtime](../zynthian-web/README.md) extends this image
+with noVNC and a browser audio/MIDI bridge. Its ARM64 build uses a native
+Tkhtml wheel with the same TkinterWeb 3.x API. The Steam Deck launcher remains
+an x86-64 host integration using the host's PipeWire server.
+
 ## Status
 
 Physical Steam Deck hardware validation remains outstanding. The CI workflow produces an

@@ -1,0 +1,86 @@
+#!/bin/bash
+set -euo pipefail
+here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+name=crest-zynthian-web
+image=localhost/zynthian-web:oram
+if [[ $(uname -s) == Darwin ]]; then
+    data="${ZYNTHIAN_WEB_DATA:-$HOME/Library/Application Support/crest-zynthian}"
+else
+    data="${ZYNTHIAN_WEB_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/crest-zynthian}"
+fi
+
+require_docker() {
+    docker info >/dev/null 2>&1 || { echo 'Start Docker Desktop (Mac) or Docker Engine (Linux), then retry.' >&2; exit 1; }
+}
+
+existing_container() {
+    docker container inspect "$name" >/dev/null 2>&1
+}
+
+check_owner() {
+    local label
+    label=$(docker inspect -f '{{index .Config.Labels "org.crest-zynthian.runtime"}}' "$name")
+    [[ $label == web ]] || { echo "Container $name already exists and is not this application. Leaving it untouched." >&2; exit 1; }
+    local mount
+    mount=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' "$name")
+    [[ $mount == "$data" ]] || { echo "Existing container uses data at $mount; requested $data. Leaving it untouched." >&2; exit 1; }
+}
+
+print_url() {
+    printf 'http://localhost:8765/#token=%s\n' "$(cat "$data/access-token")"
+}
+
+build() {
+    docker build -t localhost/zynthian-steamdeck:oram -f "$here/../zynthian-steamdeck/Containerfile" "$here/../zynthian-steamdeck"
+    docker build -t "$image" -f "$here/Containerfile" "$here"
+}
+
+start() {
+    if existing_container; then
+        check_owner
+        docker start "$name" >/dev/null
+    else
+        docker image inspect "$image" >/dev/null 2>&1 || build
+        mkdir -p "$data"
+        data=$(cd "$data" && pwd)
+        python3 - "$data/access-token" <<'PY'
+import os, secrets, sys
+try:
+    fd = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+except FileExistsError:
+    pass
+else:
+    with os.fdopen(fd, 'w') as token:
+        token.write(secrets.token_urlsafe(32) + '\n')
+PY
+        docker run -d --init --name "$name" --user "$(id -u):$(id -g)" \
+            --shm-size=256m --stop-timeout=30 \
+            -p 127.0.0.1:8765:8765 --mount "type=bind,source=$data,target=/data" \
+            "$image" >/dev/null
+    fi
+    for _ in {1..120}; do
+        if curl -fsS http://localhost:8765/health 2>/dev/null | python3 -c 'import json,sys; sys.exit(not json.load(sys.stdin)["ready"])' 2>/dev/null; then
+            print_url
+            return
+        fi
+        if [[ $(docker inspect -f '{{.State.Running}}' "$name") != true ]]; then
+            docker logs "$name" >&2
+            echo "Startup failed. Logs: $data/logs" >&2
+            return 1
+        fi
+        sleep 1
+    done
+    echo "Startup timed out. Logs: $data/logs" >&2
+    return 1
+}
+
+require_docker
+case "${1:-start}" in
+    build) build ;;
+    start) start ;;
+    stop) check_owner; docker stop -t 30 "$name" ;;
+    status) check_owner; docker inspect -f '{{.State.Status}}' "$name" ;;
+    url) check_owner; print_url ;;
+    logs) check_owner; tail -n 80 "$data/logs/session.log" "$data/logs/web.log" ;;
+    *) echo "Usage: $0 {start|stop|status|url|logs|build}" >&2; exit 2 ;;
+esac

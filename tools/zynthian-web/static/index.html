@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zynthian</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <strong>Zynthian</strong>
+    <span id="display-status" role="status">Connecting display…</span>
+    <button id="audio">Enable audio</button>
+    <label>Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="0.6"></label>
+    <button id="midi">Connect MIDI keyboard</button>
+    <button id="panic">All notes off</button>
+  </header>
+  <main>
+    <div id="display" aria-label="Stock Zynthian touchscreen"></div>
+    <section aria-label="Browser keyboard">
+      <div class="keyboard-heading">
+        <span id="audio-status" role="status">Enable audio to hear and play instruments.</span>
+        <label>MIDI channel <select id="channel" aria-label="MIDI channel"></select></label>
+      </div>
+      <div id="piano" tabindex="0" aria-label="Piano. Click here, then use A W S E D F T G Y H U J K."></div>
+      <p>Click piano, then play A W S E D F T G Y H U J K. Touchscreen controls above are stock Zynthian.
+        Save work with <strong>Snapshot</strong>. Chrome supports attached MIDI keyboards; audio and on-screen keys also work without MIDI hardware.</p>
+      <p id="midi-status" role="status"></p>
+    </section>
+  </main>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

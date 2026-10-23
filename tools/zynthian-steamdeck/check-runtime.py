@@ -7,7 +7,8 @@ import platform
 import shutil
 import sys
 
-if platform.machine() != 'x86_64': raise SystemExit('Requires x86_64')
+if platform.machine() not in ('x86_64', 'aarch64'):
+    raise SystemExit('Requires x86_64 or aarch64 Linux')
 root = Path(os.environ['ZYNTHIAN_DIR'])
 for path in [root/'zyncoder/build/libzyncore.so'] + [root/f'zynthian-ui/zynlibs/{name}/build/lib{name}.so' for name in ('zynsmf', 'zynseq', 'zynmixer', 'zynaudioplayer')]:
     ctypes.CDLL(str(path))

@@ -3,5 +3,7 @@ ffmpeg-python==0.2.0
 wavio==0.0.9
 Levenshtein==0.27.5
 # Oram's help viewer uses the 3.x callback API.
-tkinterweb==3.24.7
+tkinterweb==3.24.7; platform_machine != "aarch64"
+# First 3.x series with native Linux ARM64 Tkhtml wheels; retain the 3.x API.
+tkinterweb==3.24.15; platform_machine == "aarch64"
 alsa-midi==1.0.4

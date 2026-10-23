@@ -3,10 +3,20 @@
 Public Zynthian host designs and native Linux runtime packaging.
 
 - [Steam Deck / Linux x86-64 build and installation](tools/zynthian-steamdeck/README.md)
+- [Playable Mac / Linux browser runtime](tools/zynthian-web/README.md)
 - [Interactive control-map design](design/firmware-control-map.html)
 - [Rig, routing and control-surface design](docs/RIG-DESIGN.md)
 - [Builds, installer bundles and test evidence](https://github.com/crestenstclair/crest-zynthian/actions/workflows/zynthian-steamdeck.yml)
 - [Repository move and provenance](docs/REPOSITORY-MOVE.md)
+
+## Mac browser runtime
+
+Start Docker Desktop, then run `bash tools/zynthian-web/zynthian-web start`.
+Open the printed local URL and click **Enable audio**. This runs the stock
+Zynthian touchscreen and engines with browser audio, an on-screen piano and
+optional Web MIDI keyboard input. Apple Silicon builds run natively as Linux
+ARM64. Configuration, snapshots and recordings stay on the Mac. See the
+[browser guide](tools/zynthian-web/README.md) for setup, controls and limits.
 
 ## Steam Deck runtime
 
