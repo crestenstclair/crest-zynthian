@@ -10,7 +10,8 @@ Build and integration validation are in progress. This is not yet a claim of
 validation on physical Steam Deck hardware. The CI workflow produces an
 installer bundle only after the stock UI, FluidSynth audio through the Zynthian
 MIDI router and mixer, Calf Reverb in Zynthian's Jalv, and a fresh-process
-snapshot restore pass. See the workflow's evidence artifact for logs, WAVs,
+snapshot restore pass on both JACK and PipeWire. The tests also check the
+default output connection. See the workflow's evidence artifact for logs, WAVs,
 screenshots and numeric results.
 
 ## Install on SteamOS
@@ -82,10 +83,13 @@ docker build -t localhost/zynthian-steamdeck:oram -f Containerfile .
 mkdir -p results
 docker run --rm --shm-size=256m -v "$PWD/results:/results" \
   localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh
+docker run --rm --shm-size=256m -v "$PWD/results:/results" \
+  localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh pipewire
 ```
 
 `tests/run-smoke.sh` uses JACK's dummy hardware backend at 48 kHz / 256 frames
-and Xvfb. Synthesizer DSP, MIDI routing, LV2 processing and captured audio are
+and Xvfb. Its `pipewire` mode uses a private PipeWire server and virtual output
+to test the same JACK compatibility configuration used on SteamOS. Synthesizer DSP, MIDI routing, LV2 processing and captured audio are
 real. It tests functional software integration; it cannot measure Deck speakers,
 USB device compatibility, hardware latency or sustained thermal performance.
 

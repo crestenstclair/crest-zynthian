@@ -16,12 +16,22 @@ jobs:
       - uses: actions/checkout@v4
         with:
           sparse-checkout: tools/zynthian-steamdeck
+      - uses: docker/setup-buildx-action@v3
       - name: Build native x86-64 runtime
-        run: docker build -t localhost/zynthian-steamdeck:oram -f tools/zynthian-steamdeck/Containerfile tools/zynthian-steamdeck
+        uses: docker/build-push-action@v6
+        with:
+          context: tools/zynthian-steamdeck
+          file: tools/zynthian-steamdeck/Containerfile
+          tags: localhost/zynthian-steamdeck:oram
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       - name: Test stock UI, MIDI, audio, LV2 and fresh-process snapshot restore
         run: |
           mkdir -p results
           docker run --rm --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh
+      - name: Test SteamOS PipeWire audio compatibility
+        run: docker run --rm --shm-size=256m -v "$PWD/results:/results" localhost/zynthian-steamdeck:oram bash /opt/zynthian-steamdeck/tests/run-smoke.sh pipewire
       - name: Upload test evidence
         if: always()
         uses: actions/upload-artifact@v4

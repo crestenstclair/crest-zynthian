@@ -29,7 +29,7 @@ from PIL import ImageGrab
 config.zyngui = app = zynthian_gui()
 app.create_screens()
 app.run_start_thread()
-result = {'mode': mode, 'passed': False}
+result = {'mode': mode, 'backend': os.environ.get('ZYNTHIAN_TEST_BACKEND'), 'passed': False}
 
 def require(ok, message):
     if not ok:
@@ -56,6 +56,7 @@ def exercise():
             processor = next(p for p in manager.chains[1].get_processors() if p.eng_code == 'FS')
             require(any(p.eng_code == 'JV/Calf Reverb' for p in manager.chains[1].get_processors()),
                     'Snapshot lost LV2 effect')
+            effect = next(p for p in manager.chains[1].get_processors() if p.eng_code == 'JV/Calf Reverb')
         manager.set_active_chain_by_id(1)
         state.zynmixer.set_level(manager.chains[1].mixer_chan, 0.7)
         state.zynmixer.set_level(state.zynmixer.MAX_NUM_CHANNELS-1, 0.7)
@@ -63,6 +64,15 @@ def exercise():
         zynautoconnect.request_midi_connect(True)
         time.sleep(2)
         client = jack.Client('zynthian_test_capture', no_start_server=True)
+        graph = {p.name: [s.name for s in client.get_all_connections(p)]
+                 for p in client.get_ports(is_input=True)}
+        (output/f'{mode}-graph.json').write_text(json.dumps(graph, indent=2)+'\n')
+        effect_inputs = client.get_ports(effect.get_jackname(), is_audio=True, is_input=True)
+        require(len(effect_inputs) >= 2 and all(graph[p.name] for p in effect_inputs),
+                'LV2 effect has unconnected audio inputs')
+        effect_outputs = {p.name for p in client.get_ports(effect.get_jackname(), is_audio=True, is_output=True)}
+        require(any(effect_outputs.intersection(sources) for name, sources in graph.items()
+                    if name.startswith('zynmixer:input_')), 'LV2 output is not routed into the mixer')
         channels = [client.inports.register('left'), client.inports.register('right')]
         audio = np.zeros((client.samplerate * 4, 2), dtype=np.float32)
         position = 0
@@ -77,6 +87,12 @@ def exercise():
             if position == len(audio): complete.set()
         client.activate()
         master = state.zynmixer.MAX_NUM_CHANNELS
+        outputs = client.get_ports('system:playback_', is_audio=True, is_input=True)
+        require(len(outputs) >= 2, 'Default output is not exposed as system:playback_N')
+        for channel, suffix in enumerate(('a', 'b')):
+            connections = client.get_all_connections(f'zynmixer:output_{master:02d}{suffix}')
+            require(outputs[channel].name in [p.name for p in connections],
+                    f'Stock autoconnect did not route master output {suffix} to the default device')
         client.connect(f'zynmixer:output_{master:02d}a', channels[0])
         client.connect(f'zynmixer:output_{master:02d}b', channels[1])
         time.sleep(0.25)
@@ -99,6 +115,7 @@ def exercise():
         ImageGrab.grab().save(output/f'{mode}.png')
         result.update(passed=True, rms=rms, peak=peak, sample_rate=sample_rate,
                       preset=processor.preset_name, screens=len(app.screens),
+                      default_outputs=[p.name for p in outputs],
                       engines=[p.eng_code for p in manager.chains[1].get_processors()])
     except Exception:
         result['error'] = traceback.format_exc()
