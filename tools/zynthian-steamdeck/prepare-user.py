@@ -14,6 +14,7 @@ for sub in ('snapshots/000', 'capture', 'presets', 'presets/lv2', 'presets/zynad
             'midi-profiles', 'sequencer', 'audio', 'scripts', 'favorites'):
     (data / sub).mkdir(parents=True, exist_ok=True)
 for source, dest in ((system/'config/default_midi_profile.sh', data/'midi-profiles/default.sh'),
+                     (system/'config/sidechain.json', config/'sidechain.json'),
                      (system/'config/keybinding', config/'keybinding'),
                      (system/'config/wiring-profiles', config/'wiring-profiles')):
     if source.is_dir():

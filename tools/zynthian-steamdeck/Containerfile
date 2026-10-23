@@ -20,7 +20,7 @@ COPY build-runtime.sh sources.lock.json desktop-compat.patch requirements.txt /o
 RUN bash /opt/zynthian-steamdeck/build-runtime.sh
 # The stock engine registry imports websocket even when MOD-UI is disabled;
 # CairoSVG renders icons in the stock touchscreen keypad.
-RUN apt-get update && apt-get install -y --no-install-recommends python3-websocket python3-cairosvg \
+RUN apt-get update && apt-get install -y --no-install-recommends python3-websocket python3-cairosvg alsa-utils \
     && rm -rf /var/lib/apt/lists/*
 COPY . /opt/zynthian-steamdeck/
 RUN mkdir -p /etc/pipewire/jack.conf.d && cp /opt/zynthian-steamdeck/pipewire-jack.conf /etc/pipewire/jack.conf.d/50-zynthian.conf

@@ -41,7 +41,7 @@ for _ in {1..50}; do
 done
 [[ $ready == 1 ]] || { cat "$TEST_OUTPUT/$backend.log"; exit 1; }
 if [[ $backend == pipewire ]]; then
-    bash "$here/launch.sh" --check >"$TEST_OUTPUT/preflight.json" 2>"$TEST_OUTPUT/preflight.log"
+    bash "$here/launch.sh" --check >"$TEST_OUTPUT/preflight.log" 2>"$TEST_OUTPUT/preflight-errors.log"
 fi
 for phase in create restore; do
     timeout 120 xvfb-run -a -s '-screen 0 1280x800x24' \

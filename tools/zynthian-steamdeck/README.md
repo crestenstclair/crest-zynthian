@@ -6,12 +6,12 @@ sequencer, mixer and sampler. Uses the existing touchscreen interface at
 
 ## Status
 
-Build and integration validation are in progress. This is not yet a claim of
-validation on physical Steam Deck hardware. The CI workflow produces an
+Physical Steam Deck hardware validation remains outstanding. The CI workflow produces an
 installer bundle only after the stock UI, FluidSynth audio through the Zynthian
 MIDI router and mixer, Calf Reverb in Zynthian's Jalv, and a fresh-process
 snapshot restore pass on both JACK and PipeWire. The tests also check the
-default output connection. See the workflow's evidence artifact for logs, WAVs,
+default output connection, then install the bundle with rootless Podman and
+Distrobox and check the connection to a host PipeWire server. See the workflow's evidence artifact for logs, WAVs,
 screenshots and numeric results.
 
 ## Install on SteamOS
