@@ -105,6 +105,7 @@ def exercise():
         require(complete.wait(8), 'Audio callback stalled')
         client.deactivate()
         sample_rate = client.samplerate
+        output_names = [p.name for p in outputs]
         client.close()
         require(np.isfinite(audio).all(), 'Non-finite audio')
         rms = float(np.sqrt(np.mean(audio**2)))
@@ -118,7 +119,7 @@ def exercise():
         ImageGrab.grab().save(output/f'{mode}.png')
         result.update(passed=True, rms=rms, peak=peak, sample_rate=sample_rate,
                       preset=processor.preset_name, screens=len(app.screens),
-                      default_outputs=[p.name for p in outputs],
+                      default_outputs=output_names,
                       engines=[p.eng_code for p in manager.chains[1].get_processors()])
     except Exception:
         result['error'] = traceback.format_exc()

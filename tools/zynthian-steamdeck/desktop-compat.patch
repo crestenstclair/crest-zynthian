@@ -167,3 +167,42 @@ index 0b1238d..c046920 100644
              break;
          case 's':
              printf(" %s", tosc_getNextString(osc));
+diff --git a/zynlibs/zynseq/zynseq.cpp b/zynlibs/zynseq/zynseq.cpp
+index c3bbf23..f3cfe31 100644
+--- a/zynlibs/zynseq/zynseq.cpp
++++ b/zynlibs/zynseq/zynseq.cpp
+@@ -755,10 +755,16 @@ int onJackXrun(void* pArgs) {
+ 
+ void end() {
+     DPRINTF("zynseq exit\n");
+-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
++    // Callbacks access the sequence manager and schedule until deactivated.
++    if (g_pJackClient) {
++        jack_deactivate(g_pJackClient);
++        jack_client_close(g_pJackClient);
++        g_pJackClient = NULL;
++    }
+     for (auto it : g_mSchedule) {
+         delete it.second;
+     }
++    g_mSchedule.clear();
+ }
+ 
+ // ** Library management functions **
+diff --git a/zynlibs/zynsmf/zynsmf.cpp b/zynlibs/zynsmf/zynsmf.cpp
+index 2a1e004..7373f81 100644
+--- a/zynlibs/zynsmf/zynsmf.cpp
++++ b/zynlibs/zynsmf/zynsmf.cpp
+@@ -54,6 +54,12 @@ class SmfFactory {
+   public:
+     SmfFactory() { DPRINTF("Initialise SMF\n"); }
+     ~SmfFactory() {
++        // Stop MIDI callbacks before releasing their SMF objects.
++        if (g_pJackClient) {
++            jack_deactivate(g_pJackClient);
++            jack_client_close(g_pJackClient);
++            g_pJackClient = NULL;
++        }
+         for (auto it = m_vSmf.begin(); it != m_vSmf.end(); ++it)
+             delete *it;
+         DPRINTF("Exit SMF\n");
