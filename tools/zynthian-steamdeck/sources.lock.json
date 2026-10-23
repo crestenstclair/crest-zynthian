@@ -1,0 +1,26 @@
+{
+  "zynthian-ui": {
+    "url": "https://github.com/zynthian/zynthian-ui.git",
+    "commit": "11d4e858367db465a431c701d9035432742a5a7d"
+  },
+  "zynthian-sys": {
+    "url": "https://github.com/zynthian/zynthian-sys.git",
+    "commit": "1ff98bebf5f73fdd8d992dc9ba7e7ddfceaee78e"
+  },
+  "zyncoder": {
+    "url": "https://github.com/zynthian/zyncoder.git",
+    "commit": "cbd93aa12d794efa88379f58a27c32990f025abb"
+  },
+  "zynthian-data": {
+    "url": "https://github.com/zynthian/zynthian-data.git",
+    "commit": "c1c1838bbb9768c8d1a647250ea362a4d5e7d435"
+  },
+  "jalv": {
+    "url": "https://github.com/zynthian/jalv.git",
+    "commit": "e01b6d64651d451107640b1a502e06c9ec10e353"
+  },
+  "libsndfile": {
+    "url": "https://github.com/riban-bw/libsndfile.git",
+    "commit": "156184e35eaf17f5bef7c2b3e1521a0b485e834d"
+  }
+}

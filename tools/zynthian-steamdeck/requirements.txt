@@ -1,0 +1,6 @@
+oyaml==1.0
+ffmpeg-python==0.2.0
+wavio==0.0.9
+Levenshtein==0.27.5
+tkinterweb==4.25.5
+alsa-midi==1.0.4

@@ -1,0 +1,25 @@
+FROM docker.io/library/ubuntu:24.04
+ARG DEBIAN_FRONTEND=noninteractive
+# These packages are installed INSIDE the image, never in SteamOS.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git build-essential cmake meson ninja-build pkg-config \
+    libasound2-dev libjack-jackd2-dev liblo-dev libsndfile1-dev libsamplerate0-dev \
+    librubberband-dev libfftw3-dev liblilv-dev libsratom-dev libsuil-dev libzix-dev \
+    libflac-dev libogg-dev libvorbis-dev libopus-dev \
+    python3 python3-dev python3-venv python3-tk python3-pil python3-pil.imagetk \
+    python3-numpy python3-scipy python3-pexpect python3-psutil python3-requests \
+    python3-evdev python3-serial python3-yaml python3-liblo python3-jack-client \
+    python3-lilv python3-alsaaudio python3-usb python3-rdflib python3-bs4 \
+    python3-pyudev python3-soundfile \
+    fluidsynth fluid-soundfont-gm zynaddsubfx setbfree sooperlooper calf-plugins \
+    pipewire-jack pipewire-bin jackd2 lilv-utils sox rubberband-cli ffmpeg \
+    fontconfig fonts-dejavu-core xvfb xauth x11-utils sudo passwd procps less \
+    iproute2 iputils-ping libnss-myhostname locales tzdata util-linux curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY . /opt/zynthian-steamdeck/
+RUN mkdir -p /etc/pipewire/jack.conf.d && cp /opt/zynthian-steamdeck/pipewire-jack.conf /etc/pipewire/jack.conf.d/50-zynthian.conf
+RUN bash /opt/zynthian-steamdeck/build-runtime.sh
+ENV ZYNTHIAN_DIR=/opt/zynthian
+ENV LD_LIBRARY_PATH=/opt/zynthian/lib
+ENV PATH=/opt/zynthian/bin:/opt/zynthian/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CMD ["/bin/bash"]

@@ -1,0 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+[[ -S $runtime/pipewire-0 ]] || { echo "No PipeWire socket at $runtime/pipewire-0" >&2; exit 1; }
+logdir=${XDG_STATE_HOME:-$HOME/.local/state}/zynthian
+mkdir -p "$logdir"
+exec distrobox enter --name zynthian-steamdeck -- env \
+    PIPEWIRE_RUNTIME_DIR="$runtime" PIPEWIRE_REMOTE=pipewire-0 \
+    /opt/zynthian-steamdeck/launch.sh "$@" >>"$logdir/session.log" 2>&1

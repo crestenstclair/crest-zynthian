@@ -1,0 +1,65 @@
+diff --git a/zynlibs/zynaudioplayer/audio_player.h b/zynlibs/zynaudioplayer/audio_player.h
+index b87b1cb..52779e2 100644
+--- a/zynlibs/zynaudioplayer/audio_player.h
++++ b/zynlibs/zynaudioplayer/audio_player.h
+@@ -48,7 +48,7 @@ struct cue_point {
+     cue_point(uint32_t pos, const char* nm) {
+         offset = pos;
+         if (nm)
+-            sprintf(name, nm);
++            snprintf(name, sizeof(name), "%s", nm);
+     };
+ };
+ 
+diff --git a/zynlibs/zynaudioplayer/player.cpp b/zynlibs/zynaudioplayer/player.cpp
+index 52f493e..4354c98 100644
+--- a/zynlibs/zynaudioplayer/player.cpp
++++ b/zynlibs/zynaudioplayer/player.cpp
+@@ -1441,7 +1441,7 @@ int on_jack_process(jack_nframes_t nFrames, void* arg) {
+                 pPlayer->held_note = 0;
+             }
+ 
+-            DPRINTF("libzynaudioplayer: Stopped. Used %u frames from %u in buffer to soft mute (fade). Silencing remaining %u frames (%u bytes)\n", a_count,
++            DPRINTF("libzynaudioplayer: Stopped. Used %zu frames from %u in buffer to soft mute (fade). Silencing remaining %zu frames (%zu bytes)\n", a_count,
+                     nFrames, nFrames - a_count, (nFrames - a_count) * sizeof(jack_default_audio_sample_t));
+         }
+ 
+@@ -1551,7 +1551,7 @@ AUDIO_PLAYER* add_player() {
+         jack_port_unregister(g_jack_client, pPlayer->jack_out_a);
+         return 0;
+     }
+-    DPRINTF("libaudioplayer player %u registered JACK audio output ports %u & %u\n", pPlayer, pPlayer->jack_out_a, pPlayer->jack_out_b);
++    DPRINTF("libaudioplayer player %p registered JACK audio output ports %p & %p\n", pPlayer, pPlayer->jack_out_a, pPlayer->jack_out_b);
+     return pPlayer;
+ }
+ 
+@@ -1560,10 +1560,10 @@ void remove_player(AUDIO_PLAYER* pPlayer) {
+         return;
+     unload(pPlayer);
+     if (jack_port_unregister(g_jack_client, pPlayer->jack_out_a)) {
+-        fprintf(stderr, "libaudioplayer error: player %u (%u) cannot unregister audio output port A %02d\n", pPlayer->index, pPlayer, pPlayer->jack_out_a);
++        fprintf(stderr, "libaudioplayer error: player %u (%p) cannot unregister audio output port A %p\n", pPlayer->index, pPlayer, pPlayer->jack_out_a);
+     }
+     if (jack_port_unregister(g_jack_client, pPlayer->jack_out_b)) {
+-        fprintf(stderr, "libaudioplayer error: player %u (%u) cannot unregister audio output port B %02d\n", pPlayer->index, pPlayer, pPlayer->jack_out_b);
++        fprintf(stderr, "libaudioplayer error: player %u (%p) cannot unregister audio output port B %p\n", pPlayer->index, pPlayer, pPlayer->jack_out_b);
+     }
+     auto it = find(playerVector.players.begin(), playerVector.players.end(), pPlayer);
+     if (it != playerVector.players.end())
+diff --git a/zynlibs/zynmixer/tinyosc.c b/zynlibs/zynmixer/tinyosc.c
+index 0b1238d..c046920 100644
+--- a/zynlibs/zynmixer/tinyosc.c
++++ b/zynlibs/zynmixer/tinyosc.c
+@@ -321,10 +321,10 @@ void tosc_printMessage(tosc_message* osc) {
+             printf(" %d", tosc_getNextInt32(osc));
+             break;
+         case 'h':
+-            printf(" %lld", tosc_getNextInt64(osc));
++            printf(" %lld", (long long)tosc_getNextInt64(osc));
+             break;
+         case 't':
+-            printf(" %lld", tosc_getNextTimetag(osc));
++            printf(" %llu", (unsigned long long)tosc_getNextTimetag(osc));
+             break;
+         case 's':
+             printf(" %s", tosc_getNextString(osc));
