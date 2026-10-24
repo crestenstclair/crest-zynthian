@@ -1,5 +1,11 @@
 # Zynthian controller webview
 
+The current desktop runtime uses **Node/HTML**. Start with the
+[parent guide](../README.md), [screen map](../controller-node/SCREEN-COVERAGE.md)
+and [validation record](../runtime/VALIDATION.md). This directory retains the
+optional supplied C++ host; the current runtime does not build or launch it.
+The build and screen descriptions below document that earlier host.
+
 An experimental C++ / Qt 6 WebEngine frontend for this Zynthian fork. Qt
 WebChannel connects the embedded HTML interface to C++; SDL2 reads gamepads.
 An opt-in local adapter exposes the **existing running Zynthian application**.
@@ -164,32 +170,14 @@ successful command returns its resulting state and revision with its acknowledgm
 
 ## Validation and remaining work
 
-The C++ executable builds against Qt 6.4.2 and SDL2 2.30.0 in the provided Ubuntu
-environment. Python adapter tests exercise actual upstream menu/grid, note-entry and clip-launch
-methods, callback arguments, sequencer cursor/revision guards, native editing,
-transport, CC events, composite controls and confirmation behavior. C++ tests
-cover navigation, focus, transport framing, disconnect behavior and key repeat.
+The earlier C++ host was exercised against the supplied backend before the
+frontend moved to Node/HTML. Current live browser checks and remaining limits
+are recorded in [runtime/VALIDATION.md](../runtime/VALIDATION.md). The shared
+HTML/CSS and bridge now live alongside the Node frontend. Physical gamepads,
+Steam Deck/Pi hardware, USB devices, latency and thermal behavior remain
+unvalidated. Tracker, Euclidean and randomizer remain previews.
 
-The managed environment denies local sockets. Socket-dependent tests report
-explicit skips there; they remain required on an ordinary Linux test host.
-**No live Zynthian session, audio output, Steam Deck install, physical gamepad
-has been validated. The actual HTML/CSS/JS has been rendered with labeled documentation fixtures.** No claim of working audio
-or complete Zynthian feature parity is made by this patch.
-
-Next verification on a configured target:
-
-1. Run the full tests with no skips and launch both applications as the same user.
-2. Add an instrument through Zynthian; browse banks and presets; play external MIDI.
-3. Edit native controls, then change them by MIDI and check the reflected values.
-4. Save / restore a snapshot and ZS3; verify state and routing through Zynthian.
-5. Test controller hotplug, focus loss, held buttons and reconnection during loading.
-6. Verify note/chord entry, duration/velocity, undo/redo, MIDI recording, CC edits,
-   phrase launch/follow/move/clone and snapshot restore of sequences.
-7. Complete remaining custom screens, then package the verified runtime for Steam Deck.
-
-Source baseline: upstream `zynthian/zynthian-ui` commit
-`f46b0189b6163472db39aa607369f397ed23b65a`.
-New files use the upstream GPL-2.0-or-later license; see `LICENSE.txt`.
+New files use GPL-2.0-or-later; see `../LICENSE.txt`.
 
 ## Additional sequencer mockups
 

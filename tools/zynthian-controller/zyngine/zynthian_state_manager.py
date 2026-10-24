@@ -633,7 +633,7 @@ class zynthian_state_manager:
                 if self.status_xrun:
                     xruns_status = self.status_xrun
 
-                self.status_midi_zmop = lib_zyncore.zmop_get_midi_activity()
+                self.status_midi_zmop = lib_zyncore.zmop_get_midi_activity() if hasattr(lib_zyncore, "zmop_get_midi_activity") else 0
                 if midi_status:
                     self.status_midi = False
                     midi_status = False
@@ -2024,7 +2024,11 @@ class zynthian_state_manager:
 
     def raw_all_notes_off_chan(self, chan):
         logging.info(f"Raw All Notes Off for channel {chan}!")
-        lib_zyncore.ui_send_all_notes_off_chan(chan)
+        if hasattr(lib_zyncore, "ui_send_all_notes_off_chan"):
+            lib_zyncore.ui_send_all_notes_off_chan(chan)
+        else:
+            for note in range(128):
+                lib_zyncore.ui_send_note_off(chan, note)
 
     # ------------------------------------------------------------------
     # MPE initialization

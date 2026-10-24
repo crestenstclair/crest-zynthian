@@ -1,0 +1,68 @@
+#!/bin/bash
+set -euo pipefail
+here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+name=crest-zynthian-controller
+image=localhost/zynthian-controller:overlay
+if [[ $(uname -s) == Darwin ]]; then
+    data="${ZYNTHIAN_CONTROLLER_DATA:-$HOME/Library/Application Support/crest-zynthian-controller}"
+else
+    data="${ZYNTHIAN_CONTROLLER_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/crest-zynthian-controller}"
+fi
+[[ $data == /* ]] || { echo 'ZYNTHIAN_CONTROLLER_DATA must be absolute.' >&2; exit 2; }
+docker info >/dev/null 2>&1 || { echo 'Start Docker Desktop (Mac) or Docker Engine (Linux).' >&2; exit 1; }
+existing() { docker container inspect "$name" >/dev/null 2>&1; }
+check_owner() {
+    local label mount
+    label=$(docker inspect -f '{{index .Config.Labels "org.crest-zynthian.runtime"}}' "$name")
+    [[ $label == controller ]] || { echo "Container $name is not this controller runtime; leaving it untouched." >&2; exit 1; }
+    mount=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' "$name")
+    [[ $mount == "$data" ]] || { echo "Container uses $mount; requested $data. Leaving it untouched." >&2; exit 1; }
+}
+print_url() { printf 'http://localhost:8766/#token=%s\n' "$(cat "$data/access-token")"; }
+build() {
+    docker image inspect localhost/zynthian-web:oram >/dev/null 2>&1 || {
+        echo 'Missing installed localhost/zynthian-web:oram runtime. This build does not fetch source repositories.' >&2; exit 1;
+    }
+    docker build --pull=false -t "$image" -f "$here/runtime/Containerfile" "$here"
+}
+start() {
+    mkdir -p "$data"
+    data=$(cd "$data" && pwd)
+    if existing; then
+        check_owner
+        docker start "$name" >/dev/null
+    else
+        docker image inspect "$image" >/dev/null 2>&1 || build
+        python3 - "$data/access-token" <<'PY'
+import os, secrets, sys
+try:
+    fd = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+except FileExistsError:
+    pass
+else:
+    with os.fdopen(fd, 'w') as token:
+        token.write(secrets.token_urlsafe(32) + '\n')
+PY
+        docker run -d --init --name "$name" --user "$(id -u):$(id -g)" \
+            --shm-size=256m --stop-timeout=30 -p 127.0.0.1:8766:8766 \
+            --mount "type=bind,source=$data,target=/data" "$image" >/dev/null
+    fi
+    for _ in {1..90}; do
+        if curl -fsS http://localhost:8766/health 2>/dev/null | python3 -c 'import json,sys;sys.exit(not json.load(sys.stdin)["ready"])' 2>/dev/null; then print_url; return; fi
+        if [[ $(docker inspect -f '{{.State.Running}}' "$name") != true ]]; then
+            echo "Startup failed. See $data/logs/backend.log and frontend.log." >&2; return 1
+        fi
+        sleep 1
+    done
+    echo "Startup timed out. See $data/logs." >&2; return 1
+}
+case "${1:-start}" in
+    build) build ;;
+    start) start ;;
+    open) start >/dev/null; if [[ $(uname -s) == Darwin ]]; then open "$(print_url)"; else xdg-open "$(print_url)"; fi ;;
+    stop) check_owner; docker stop -t 30 "$name" ;;
+    status) check_owner; docker inspect -f '{{.State.Status}}' "$name" ;;
+    url) check_owner; print_url ;;
+    logs) check_owner; tail -n 60 "$data/logs/backend.log" "$data/logs/frontend.log" ;;
+    *) echo "Usage: $0 {start|open|stop|status|url|logs|build}" >&2; exit 2 ;;
+esac

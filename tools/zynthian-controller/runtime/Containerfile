@@ -1,10 +1,28 @@
-# Uses an already installed runtime; never fetches source repositories.
+# Build only source supplied in this repository, using the installed host runtime.
 ARG BASE_IMAGE=localhost/zynthian-web:oram
 FROM ${BASE_IMAGE}
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends qt6-base-dev qt6-webengine-dev qt6-webchannel-dev libsdl2-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm nlohmann-json3-dev jack-capture \
+    && ln -s /usr/bin/jack_capture /usr/local/bin/jack_capture \
     && rm -rf /var/lib/apt/lists/*
+COPY controller-node/package*.json /opt/controller/controller-node/
+RUN cd /opt/controller/controller-node && npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 COPY . /opt/controller/
-RUN cmake -S /opt/controller/controller-webview -B /opt/controller/controller-webview/build -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build /opt/controller/controller-webview/build -j4
+# Native libraries must match the supplied application's scene/phrase API.
+RUN for library in zynseq zynsmf zynmixer zynaudioplayer zynclippy; do \
+      cmake -S /opt/controller/zynlibs/$library -B /opt/controller/zynlibs/$library/build \
+        -DCMAKE_BUILD_TYPE=Release '-DCMAKE_C_FLAGS=-I/opt/zynthian/include -Wno-error=unused-result -Wno-error=format' \
+        -DCMAKE_CXX_FLAGS=-Wno-error=unused-result \
+        -DCMAKE_SHARED_LINKER_FLAGS=-L/opt/zynthian/lib && \
+      cmake --build /opt/controller/zynlibs/$library/build -j4 || exit 1; \
+    done
+RUN mv /opt/zynthian/zynthian-ui /opt/zynthian/stock-ui \
+    && ln -s /opt/controller /opt/zynthian/zynthian-ui \
+    && ln -s /opt/zynthian /zynthian
+RUN test -e /opt/zynthian/zynthian-data/files/Audio || ln -s ../audio /opt/zynthian/zynthian-data/files/Audio
+RUN test -e /opt/zynthian/zynthian-data/files/Midi || ln -s ../mid /opt/zynthian/zynthian-data/files/Midi
+LABEL org.crest-zynthian.runtime="controller"
+ENV ZYNTHIAN_AUDIO_WORKLET=/opt/zynthian-web/static/audio-worklet.js
 USER 1000:1000
+EXPOSE 8766
+CMD ["bash", "/opt/controller/runtime/session.sh"]

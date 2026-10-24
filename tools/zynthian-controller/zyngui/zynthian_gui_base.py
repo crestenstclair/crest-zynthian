@@ -497,14 +497,13 @@ class zynthian_gui_base(tkinter.Frame):
         self.set_title_ts = ts
 
         if self.title_timer:
-            self.title_timer.cancel()
+            self.after_cancel(self.title_timer)
             self.title_timer = None
         elif timeout:
             self.title = self.select_path.get()
 
         if timeout:
-            self.title_timer = Timer(timeout, self.on_title_timeout)
-            self.title_timer.start()
+            self.title_timer = self.after(round(timeout * 1000), self.on_title_timeout)
         else:
             self.title = title
             if fg:
@@ -527,7 +526,7 @@ class zynthian_gui_base(tkinter.Frame):
     # Function to revert title after toast
     def on_title_timeout(self):
         if self.title_timer:
-            self.title_timer.cancel()
+            self.after_cancel(self.title_timer)
             self.title_timer = None
         self.set_title(self.title)
 

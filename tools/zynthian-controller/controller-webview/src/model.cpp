@@ -29,6 +29,12 @@ Model::Model(QObject* parent) : QObject(parent) {
     });
 }
 
+Model::~Model() {
+    // Socket teardown emits signals. Stop callbacks before member state is destroyed.
+    socket_.disconnect(this);
+    socket_.abort();
+}
+
 void Model::connectTo(const QString& path) {
     path_ = path;
     socket_.connectToServer(path_);
@@ -49,7 +55,7 @@ QString Model::state() const {
     auto result = view_;
     result["connected"] = ready_;
     result["selected"] = selected_;
-    result["busy"] = pending_ != 0;
+    result["busy"] = pending_ != 0 || view_.value("backendBusy").toBool();
     result["error"] = error_;
     result["inputStatus"] = inputStatus_;
     result["canvasFocus"] = canvasFocus_;
@@ -128,7 +134,7 @@ void Model::read() {
 }
 
 void Model::send(QJsonObject command) {
-    if (!ready_ || pending_ || socket_.state() != QLocalSocket::ConnectedState) return;
+    if (!ready_ || pending_ || view_.value("backendBusy").toBool() || socket_.state() != QLocalSocket::ConnectedState) return;
     command["revision"] = view_.value("revision");
     command["id"] = ++sequence_;
     pending_ = sequence_;
@@ -155,7 +161,6 @@ void Model::move(int delta) {
 }
 
 void Model::input(const QString& action, bool fine) {
-    if (nativeMode_) { emit nativeInput(action, fine); return; }
     if (!ready_) return;
     if (view_.value("kind").toString() == "sequencer") {
         if (action == "focus" || action == "menu") { canvasFocus_ = !canvasFocus_; emit changed(); return; }
@@ -186,11 +191,16 @@ void Model::input(const QString& action, bool fine) {
         }
         return;
     }
-    if (action == "back" || action == "home" || action == "mixer" || action == "snapshots" || action == "panic" || action == "launcher")
+    if (action == "back" || action == "home" || action == "mixer" || action == "snapshots" || action == "panic" || action == "launcher" ||
+        view_.value("screenActions").toObject().contains(action) || view_.value("navigation").toObject().contains(action))
         send({{"method", "action"}, {"action", action}});
 }
 
 void Model::choose(const QString& id) {
+    activate(id, false);
+}
+
+void Model::activate(const QString& id, bool bold) {
     if (!ready_ || pending_) return;
     const auto items = view_.value("items").toArray();
     for (int i = 0; i < items.size(); ++i) {
@@ -199,7 +209,19 @@ void Model::choose(const QString& id) {
             selected_ = i;
             canvasFocus_ = false;
             emit changed();
-            input("select");
+            input(bold ? "bold" : "select");
+            return;
+        }
+    }
+}
+
+void Model::adjust(const QString& id, int delta, bool fine) {
+    if (delta < -10 || delta > 10) return;
+    for (const auto& value : view_.value("items").toArray()) {
+        const auto item = value.toObject();
+        if (item.value("id").toString() == id && item.value("kind").toString() == "control" &&
+            item.value("enabled").toBool() && !item.value("path").toBool()) {
+            send({{"method", "adjust"}, {"target", id}, {"delta", delta}, {"fine", fine}});
             return;
         }
     }

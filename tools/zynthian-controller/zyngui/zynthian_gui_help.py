@@ -62,13 +62,18 @@ class zynthian_gui_help(HtmlFrame):
         self.path = self.help_dir
         self.history = []
 
+        # TkinterWeb 3 (packaged desktop runtime) registers callbacks after construction.
+        legacy_links = callable(getattr(HtmlFrame, "on_link_click", None))
+        link_options = {} if legacy_links else {"on_link_click": self.link_cb}
         # Main Frame
         super().__init__(zynthian_gui_config.top,
                                     width=zynthian_gui_config.display_width,
                                     height=zynthian_gui_config.display_height,
                                     vertical_scrollbar=False,
                                     messages_enabled=False,
-                                    on_link_click=self.link_cb)
+                                    **link_options)
+        if legacy_links:
+            self.on_link_click(self.link_cb)
         #self.grid_propagate(False)
         self.link_text = tkinter.Label(self,
                                     font=zynthian_gui_config.font_topbar,
@@ -89,7 +94,7 @@ class zynthian_gui_help(HtmlFrame):
         self.bind("<B1-Motion>", self.cb_touch_motion)
         self.bind("<<DoneLoading>>", self.done_loading)
 
-    def done_loading(self, ev):
+    def done_loading(self, ev=None):
         self.loading_overlay.place_forget()
         self.link_text.place_forget()
         self.zyngui.show_screen("help", self.zyngui.SCREEN_HMODE_NONE)

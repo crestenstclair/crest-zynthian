@@ -3,6 +3,7 @@
 Public Zynthian host designs and native Linux runtime packaging.
 
 - [Steam Deck / Linux x86-64 build and installation](tools/zynthian-steamdeck/README.md)
+- [Controller interface: Node / HTML, separate runtime](tools/zynthian-controller/README.md)
 - [Playable Mac / Linux browser runtime](tools/zynthian-web/README.md)
 - [Interactive control-map design](design/firmware-control-map.html)
 - [Rig, routing and control-surface design](docs/RIG-DESIGN.md)

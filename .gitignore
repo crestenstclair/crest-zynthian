@@ -8,3 +8,6 @@ __pycache__/
 /tools/zynthian-steamdeck/results/
 /tools/zynthian-steamdeck/bundle/
 zynthian-steamdeck-image.tar*
+node_modules/
+test-results/
+playwright-report/

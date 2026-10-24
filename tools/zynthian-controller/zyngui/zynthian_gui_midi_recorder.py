@@ -25,6 +25,7 @@
 
 import os
 import logging
+from functools import partial
 import tkinter
 from os.path import isfile, join
 
@@ -234,12 +235,13 @@ class zynthian_gui_midi_recorder(zynthian_gui_selector_info):
     def smf_options_cb(self, option, smf):
         if option == "Rename":
             name = os.path.basename(smf[0])[:-4]
-            self.zyngui.show_keyboard(self.rename_smf, name)
+            self.zyngui.show_keyboard(partial(self.rename_smf, smf), name)
         elif option == "Delete":
             self.delete_smf(smf)
 
-    def rename_smf(self, new_name):
-        smf = self.list_data[self.index]
+    def rename_smf(self, smf, new_name):
+        # Closing the keyboard rebuilds this list and may reset its selection.
+        # Keep the file chosen when opening the menu, not the new selected row.
         new_name = new_name.strip()
         if new_name != smf[2]:
             try:

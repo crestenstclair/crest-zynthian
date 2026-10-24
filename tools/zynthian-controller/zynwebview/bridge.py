@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 """Expose existing Zynthian screens, callbacks and controllers over a local socket.
 
-No engines, presets or audio are implemented here. The adapter runs on Tk's
-event loop; socket I/O is nonblocking and all payloads are bounded. The feature
+No engines, presets or audio are implemented here. Socket I/O runs on Tk's
+event loop; native actions run serially off-thread like Zynthian's CUIA input,
+so callbacks can wait for the loading screen without blocking Tk. The feature
 is opt-in and accepts one client with the same OS user's socket permissions.
 """
 import hashlib
@@ -12,7 +13,11 @@ import os
 from pathlib import Path
 import socket
 import stat
+import math
+from concurrent.futures import Future
+from threading import Thread
 from .sequencer import SequencerView
+from .screen_views import add_controls, special_screen, navigation_actions, contextual_actions, widget_readouts
 
 MAX_FRAME = 1024 * 1024
 
@@ -24,26 +29,45 @@ class ScreenAdapter:
         self.revision = ""
         self.identities = []
         self.sequencer = SequencerView(self)
+        self.actions = {}
+        self.selections = {}
 
-    def _add(self, items, key, label, activate=None, control=None, identity=None):
+    def _add(self, items, key, label, activate=None, control=None, identity=None, options=None):
         row = {"id": key, "label": str(label).replace("\n", " "),
                "enabled": activate is not None or control is not None}
-        self.targets[key] = (activate, control)
+        self.targets[key] = (activate, control, options)
+        row["options"] = options is not None
         self.identities.append((key, identity))
         if control is not None:
             row.update(kind="control", value=control.value,
                        minimum=control.value_min, maximum=control.value_max,
                        display=str(control.get_value2label() if control.labels else control.value),
-                       path=bool(control.is_path))
+                       path=bool(control.is_path), toggle=bool(getattr(control, "is_toggle", False)),
+                       integer=bool(getattr(control, "is_integer", True)))
         items.append(row)
 
     def snapshot(self):
         self.targets = {}
+        self.selections = {}
         self.identities = []
         name = self.gui.current_screen
         screen = self.gui.screens.get(name)
         state = {"screen": name or "starting", "title": "Starting Zynthian",
                  "items": [], "columns": 1, "kind": "list", "message": ""}
+        manager = getattr(self.gui, "state_manager", None)
+        state["transport"] = {
+            "audioRecording": bool(getattr(getattr(manager, "audio_recorder", None), "status", False)),
+            "midiRecording": bool(getattr(manager, "status_midi_recorder", False)),
+            "midiPlaying": bool(getattr(manager, "status_midi_player", False))}
+        busy = getattr(manager, "is_busy", None)
+        startup = getattr(self.gui, "start_thread", None)
+        # The native busy thread closes loading after end_busy(). Until then,
+        # navigation can race its return to the previous screen.
+        screen_lock = getattr(self.gui, "screen_lock", None)
+        state["backendBusy"] = bool(name == "loading" or
+                                    (screen_lock is not None and screen_lock.locked()) or
+                                    (callable(busy) and busy()) or
+                                    (startup is not None and startup.is_alive()))
         items = state["items"]
         self.sequencer.actions = {}
         self.sequencer.cells = {}
@@ -56,15 +80,32 @@ class ScreenAdapter:
                           lambda t, key=key: parent.select_subscreen(key))
             if parent.chain:
                 for processor in parent.chain.get_processors():
+                    def processor_options(p=processor):
+                        # The hidden side canvas may not have rebuilt after an
+                        # insert. Select the actual processor, then use its menu.
+                        self.gui.set_current_processor(p)
+                        self.gui.show_screen("processor_options")
                     self._add(items, f"processor:{processor.id}", processor.get_name(),
-                              lambda t, p=processor: parent.select_subscreen("control", p), identity=id(processor))
+                              lambda t, p=processor: parent.select_subscreen("control", p), identity=id(processor),
+                              options=processor_options)
+                    if getattr(processor, "type", None) != "Global":
+                        self._add(items, f"presets:{processor.id}", f"Banks / presets · {processor.get_name()}",
+                                  lambda t, p=processor: self.gui.cuia_bank_preset(p), identity=id(processor))
             screen = parent.subscreen
+        navigation = navigation_actions(self.gui)
+        contextual = contextual_actions(self.gui, screen, name) if screen is not None else {}
+        self.actions = {key: callback for key, (_, callback) in {**navigation, **contextual}.items()}
+        state["navigation"] = {key: label for key, (label, _) in navigation.items()}
+        state["screenActions"] = {key: label for key, (label, _) in contextual.items()}
         if screen is not None:
             state["title"] = str(getattr(screen, "title", None) or name.replace("_", " ").title())
             if name in ("pattern_editor", "pated_cc") or (name in ("root", "mixer", "launcher") and getattr(screen, "launcher_mode", False)):
                 if name in ("root", "mixer"):
                     state["screen"] = "launcher"
                 self.sequencer.snapshot(screen, state)
+            elif name == "loading":
+                state.update(kind="status", title=screen.canvas.itemcget(screen.title_text, "text"),
+                             message=screen.canvas.itemcget(screen.details_text, "text"))
             elif name == "confirm":
                 state.update(kind="confirm", message=screen.text.get())
                 # Default focus is Cancel, including with a held controller button.
@@ -72,18 +113,23 @@ class ScreenAdapter:
                 self._add(items, "confirm", "Confirm", lambda t: screen.switch_select("S"),
                           identity=(id(screen.callback), repr(screen.callback_params)))
             elif name == "keyboard":
-                state.update(kind="keyboard", columns=10, message=screen.text)
+                state.update(kind="keyboard", columns=getattr(screen, "columns", 10), message=screen.text)
                 for i, key in enumerate(screen.keys):
                     self._add(items, f"key:{i}", key,
                               lambda t, i=i: screen.execute_key_press(i))
-                for attr, label in (("btn_space", "Space"), ("btn_delete", "Delete"),
-                                    ("btn_shift", "Shift"), ("btn_alt", "Symbols"),
-                                    ("btn_cancel", "Cancel"), ("btn_enter", "Save")):
+                numeric = getattr(screen, "mode", 1) == 0
+                special_keys = [("btn_space", "0" if numeric else "Space"), ("btn_delete", "Delete")]
+                if not numeric:
+                    special_keys += [("btn_shift", "Shift"), ("btn_alt", "Symbols")]
+                special_keys += [("btn_cancel", "Cancel"), ("btn_enter", "Save")]
+                for attr, label in special_keys:
                     i = getattr(screen, attr, None)
                     if i is not None:
                         self._add(items, f"special:{i}", label,
                                   lambda t, i=i: screen.execute_key_press(i, t == "B"))
                 self.identities.append(("keyboard-callback", id(screen.function)))
+                self._add(items, "keyboard:clear", "Clear text",
+                          lambda t: screen.execute_key_press(screen.btn_delete, True))
             elif name == "chain_manager":
                 for ci, chain in enumerate(screen.nodes):
                     for ri, row in enumerate(chain):
@@ -94,7 +140,8 @@ class ScreenAdapter:
                                 screen.switch_select(t)
                             self._add(items, f"node:{ci}:{ri}:{ni}",
                                       f'{node["chain_id"]} · {node["title"]}', activate,
-                                      identity=(node["chain_id"], str(node.get("proc"))))
+                                      identity=(node["chain_id"], str(node.get("proc"))),
+                                      options=lambda activate=activate: activate("B"))
             elif name in ("root", "mixer", "launcher"):
                 if getattr(screen, "launcher_mode", False):
                     self.sequencer.snapshot(screen, state)
@@ -102,14 +149,15 @@ class ScreenAdapter:
                     for chain_id, chain in self.gui.chain_manager.chains.items():
                         def open_chain(t, chain=chain):
                             self.gui.chain_manager.set_active_chain_by_id(chain.chain_id)
+                            self.gui.chain_control(chain.chain_id)
+                        def chain_options(chain=chain):
                             self.gui.screens["chain_options"].set_chain(chain)
                             self.gui.show_screen("chain_options")
                         self._add(items, f"chain:{chain_id}", chain.get_name(), open_chain,
-                                  identity=id(chain))
+                                  identity=id(chain), options=chain_options)
                         processor = getattr(chain, "zynmixer_proc", None)
                         if processor:
-                            for symbol in ("level", "balance", "mute", "solo"):
-                                ctrl = processor.controllers_dict.get(symbol)
+                            for symbol, ctrl in processor.controllers_dict.items():
                                 if ctrl is not None:
                                     self._add(items, f"mix:{chain_id}:{symbol}",
                                               f'{chain.get_name()} · {symbol}', control=ctrl,
@@ -129,18 +177,34 @@ class ScreenAdapter:
                     self._add(items, f"grid:{i}", node["title"], activate if action else None,
                               identity=identity)
             elif hasattr(screen, "list_data"):
+                if name == "engine":
+                    # The native engine selector has a second list for categories.
+                    # Without it the controller can only reach the initial category.
+                    for i, category in enumerate(getattr(screen, "engine_cats", []) or []):
+                        self._add(items, f"category:{i}", f"Category · {category}",
+                                  lambda t, i=i: screen.set_cat(i), identity=(category, screen.cat_index))
                 # Controls are native zynthian_controller objects from the current page.
-                for i, ctrl in enumerate(getattr(screen, "zcontrollers", [])):
-                    if ctrl is not None:
-                        self._add(items, f"control:{i}", ctrl.name, control=ctrl, identity=id(ctrl))
+                add_controls(self, screen, items)
+                readouts = widget_readouts(screen)
+                if readouts:
+                    state["content"] = {"readouts": readouts}
                 for i, row in enumerate(screen.list_data):
                     def activate(t, i=i):
                         screen.select(i)
                         screen.switch_select(t)
                     self._add(items, f"list:{i}", row[2], activate if row[0] is not None else None,
-                              identity=repr(row[:2]))
-            else:
-                state["message"] = "This screen has not been ported to the webview yet."
+                              identity=repr(row[:2]), options=(lambda activate=activate: activate("B")) if row[0] is not None else None)
+                    if row[0] is not None:
+                        self.selections[f"list:{i}"] = lambda i=i: screen.select(i)
+                    if len(row) > 3 and isinstance(row[3], (list, tuple)) and row[3] and isinstance(row[3][0], str):
+                        items[-1]["description"] = row[3][0]
+                    if name == "midi_recorder" and state["transport"]["midiPlaying"] and row[0] == getattr(manager, "last_midi_file", None):
+                        items[-1]["label"] = "▶ " + items[-1]["label"]
+                state["selectedTarget"] = f"list:{getattr(screen, 'index', 0)}"
+                state["selectionFollowsBackend"] = bool(getattr(screen, "moving_zs3", None))
+            elif not special_screen(self, name, screen, state):
+                add_controls(self, screen, items)
+                state["message"] = "No controls are available in this view." if not items else ""
             # Inline editors (e.g. admin settings) belong to the existing screen base.
             editor = getattr(screen, "param_editor_zctrl", None)
             if editor is not None:
@@ -149,7 +213,8 @@ class ScreenAdapter:
                 state["inlineEditor"] = True
         # Values may change externally without invalidating held parameter editing.
         identity = [name, state["title"], state["message"] if name == "confirm" else "",
-                    [(x["id"], x["label"], x["enabled"]) for x in items], self.identities]
+                    [(x["id"], x["label"], x["enabled"]) for x in items], self.identities,
+                    list(self.actions)]
         self.revision = hashlib.sha256(json.dumps(identity, default=str).encode()).hexdigest()[:20]
         state["revision"] = self.revision
         state["protocol"] = 1
@@ -162,7 +227,9 @@ class ScreenAdapter:
         if method == "state":
             return
         # Refresh targets before every command, including when another controller acted.
-        self.snapshot()
+        current = self.snapshot()
+        if current["backendBusy"]:
+            raise ValueError("Zynthian is busy; command discarded")
         if request.get("revision") != self.revision:
             raise ValueError("Screen changed; command discarded")
         if method == "action":
@@ -172,20 +239,33 @@ class ScreenAdapter:
                        "snapshots": self.gui.cuia_screen_snapshot,
                        "launcher": lambda: self.gui.show_screen("launcher"),
                        "panic": self.gui.cuia_all_sounds_off}
+            actions.update(self.actions)
             if request.get("action") not in actions:
                 raise ValueError("Unknown action")
+            # Browser focus is local. Synchronize it only for menus that depend
+            # on native selection, without activating or loading the focused row.
+            if request["action"] == "screenMenu" and request.get("target") in self.selections:
+                self.selections[request["target"]]()
             actions[request["action"]]()
         elif method == "sequence":
             self.sequencer.dispatch(request)
-        elif method in ("activate", "adjust"):
-            activate, control = self.targets.get(request.get("target"), (None, None))
-            if method == "adjust":
+        elif method in ("activate", "adjust", "set"):
+            activate, control, options = self.targets.get(request.get("target"), (None, None, None))
+            if method in ("adjust", "set"):
                 if control is None or control.is_path:
                     raise ValueError("Not an adjustable parameter")
-                delta = request.get("delta")
-                if type(delta) is not int or not -10 <= delta <= 10:
-                    raise ValueError("Invalid parameter delta")
-                control.nudge(delta, fine=bool(request.get("fine", False)))
+                if method == "adjust":
+                    delta = request.get("delta")
+                    if type(delta) is not int or not -10 <= delta <= 10:
+                        raise ValueError("Invalid parameter delta")
+                    control.nudge(delta, fine=bool(request.get("fine", False)))
+                else:
+                    value = request.get("value")
+                    if type(value) not in (int, float) or not math.isfinite(value) or not control.value_min <= value <= control.value_max:
+                        raise ValueError("Invalid parameter value")
+                    control.set_value(value)
+            elif request.get("bold") and options:
+                options()
             elif activate:
                 activate("B" if request.get("bold") else "S")
             elif control is not None:
@@ -224,6 +304,7 @@ class LocalBridge:
         self.incoming = b""
         self.outgoing = b""
         self.last_state = None
+        self.pending = None
         self.after_id = root.after(50, self.tick)
 
     def disconnect(self):
@@ -240,8 +321,62 @@ class LocalBridge:
         else:
             self.outgoing += frame
 
+    def start_command(self, request):
+        if self.pending:
+            raise ValueError("Zynthian is busy; command discarded")
+        client = self.client
+        future = Future()
+        self.pending = (client, request.get("id"), future)
+
+        def execute():
+            try:
+                # A disconnected client's command must not start later.
+                if self.client is not client:
+                    raise ValueError("Client disconnected; command discarded")
+                self.adapter.dispatch(request)
+                future.set_result(None)
+            except Exception as error:
+                future.set_exception(error)
+
+        Thread(target=execute, name="Controller command", daemon=True).start()
+
+    def finish_command(self):
+        if not self.pending or not self.pending[2].done():
+            return
+        client, request_id, future = self.pending
+        self.pending = None
+        state = self.adapter.snapshot()
+        # A reconnect receives current state, never the previous client's ack.
+        if self.client:
+            response = {"state": state}
+            if self.client is client:
+                error = future.exception()
+                response.update(id=request_id, ok=error is None)
+                if error:
+                    response["error"] = str(error)
+            self.emit(response)
+            self.last_state = state
+
+    def receive_request(self, line):
+        request = {}
+        try:
+            request = json.loads(line)
+            if not isinstance(request, dict):
+                raise ValueError("Expected a JSON object")
+            if request.get("method") == "state":
+                state = self.last_state if self.pending else self.adapter.snapshot()
+                if state is not None:
+                    self.emit({"id": request.get("id"), "ok": True,
+                               "state": dict(state, backendBusy=bool(self.pending) or state["backendBusy"])})
+                return
+            self.start_command(request)
+        except Exception as error:
+            self.emit({"id": request.get("id") if isinstance(request, dict) else None,
+                       "ok": False, "error": str(error)})
+
     def tick(self):
         try:
+            self.finish_command()
             try:
                 client, _ = self.listener.accept()
                 if self.client:
@@ -267,20 +402,8 @@ class LocalBridge:
                     if not self.client or b"\n" not in self.incoming:
                         break
                     line, self.incoming = self.incoming.split(b"\n", 1)
-                    request = {}
-                    try:
-                        request = json.loads(line)
-                        if not isinstance(request, dict):
-                            raise ValueError("Expected a JSON object")
-                        self.adapter.dispatch(request)
-                        # Publish the resulting cursor/revision with the ack, before accepting more input.
-                        state = self.adapter.snapshot()
-                        self.emit({"id": request.get("id"), "ok": True, "state": state})
-                        self.last_state = state
-                    except Exception as error:
-                        self.emit({"id": request.get("id") if isinstance(request, dict) else None,
-                                   "ok": False, "error": str(error)})
-                if self.client:
+                    self.receive_request(line)
+                if self.client and not self.pending:
                     state = self.adapter.snapshot()
                     if state != self.last_state:
                         self.emit({"state": state})

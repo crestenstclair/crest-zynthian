@@ -1121,8 +1121,11 @@ def audio_autoconnect():
         # Connect global audio player to aux
         if state_manager.audio_player and state_manager.audio_player.jackname:
             ports = jclient.get_ports(state_manager.audio_player.jackname, is_output=True, is_audio=True)
-            required_routes["zynmixer_bus:input_01a"].add(ports[0].name)
-            required_routes["zynmixer_bus:input_01b"].add(ports[1].name)
+            if len(ports) >= 2:
+                required_routes["zynmixer_bus:input_01a"].add(ports[0].name)
+                required_routes["zynmixer_bus:input_01b"].add(ports[1].name)
+            else:
+                deferred_audio_connect = True
     except Exception as e:
         logger.warning(e)
 
@@ -1703,6 +1706,7 @@ def stop():
 
     if jclient:
         jclient.deactivate()
+        jclient.close()
         jclient = None
 
 

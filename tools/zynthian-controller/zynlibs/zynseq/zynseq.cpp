@@ -663,6 +663,12 @@ int onJackXrun(void* /*pArgs*/) {
 
 void end() {
     DPRINTF("zynseq exit\n");
+    // Stop callbacks before static sequence/schedule objects are destroyed.
+    if (g_pJackClient) {
+        jack_deactivate(g_pJackClient);
+        jack_client_close(g_pJackClient);
+        g_pJackClient = nullptr;
+    }
     freeState();
 }
 

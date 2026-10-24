@@ -54,6 +54,12 @@ class SmfFactory {
   public:
     SmfFactory() { DPRINTF("Initialise SMF\n"); }
     ~SmfFactory() {
+        // MIDI callbacks must finish before their SMF objects are released.
+        if (g_pJackClient) {
+            jack_deactivate(g_pJackClient);
+            jack_client_close(g_pJackClient);
+            g_pJackClient = nullptr;
+        }
         for (auto it = m_vSmf.begin(); it != m_vSmf.end(); ++it)
             delete *it;
         DPRINTF("Exit SMF\n");

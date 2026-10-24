@@ -9,12 +9,12 @@ import re
 
 def preview_html(repo, start=None):
     root=Path(repo)/'controller-webview'
-    text=(root/'web/index.html').read_text()
+    text=(root.parent/'controller-node/web/index.html').read_text()
     text=re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', '', text)
     text=re.sub(r'<script[^>]*></script>', '', text)
-    css=(root/'web/style.css').read_text()+'\n'+(root/'mockups/preview.css').read_text()
+    css=(root.parent/'controller-node/web/style.css').read_text()+'\n'+(root/'mockups/preview.css').read_text()
     text=text.replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>')
-    script='window.mockupStart='+json.dumps(start or {})+';\n'+(root/'web/app.js').read_text()+'\n'+(root/'mockups/preview.js').read_text()
+    script='window.mockupStart='+json.dumps(start or {})+';\n'+(root.parent/'controller-node/web/app.js').read_text()+'\n'+(root/'mockups/preview.js').read_text()
     text=text.replace('<title>Zynthian Controller</title>','<title>Zynthian — Sequencer mockups</title>')
     return text.replace('</body>','<script>'+script+'</script></body>')
 

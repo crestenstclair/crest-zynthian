@@ -298,7 +298,7 @@ preview=preview_html(repo)
 def embedded_page(entry):
     if 'mockup' in entry:
         return preview_html(repo, entry['mockup'])
-    web=repo/'controller-webview/web'
+    web=repo/'controller-node/web'
     text=(web/'index.html').read_text()
     text=re.sub(r'<meta http-equiv="Content-Security-Policy"[^>]*>', '', text)
     text=text.replace('<link rel="stylesheet" href="style.css">','<style>'+ (web/'style.css').read_text()+'</style>')
@@ -406,13 +406,14 @@ for e in entries:
       <p class="limit">{esc(e['limit'])}</p></div></article>''')
 
 content=f'''<section id="overview"><div class="eyebrow">CONTROLLER WEBVIEW / FIELD MANUAL</div><h1>Zynthian,<br>screen by screen.</h1>
-<p class="lead">A visual reference for the current C++ / Qt controller frontend: what it shows, how to navigate it, and where the port stops.</p>
+<p class="lead">The controller interface design, screen by screen. The 52 original captures below preserve the supplied visual baseline.</p>
+<div class="notice"><strong>Current runtime: Node.js + HTML</strong>The desktop launcher now serves interactive HTML screens directly. Menus, parameters, routing, mixer, players, settings, snapshots and sequencer editors invoke the existing Zynthian backend. All 51 registered screen IDs have a presentation path; hardware-dependent actions still require their devices and services. Custom graphs currently expose parameters and scalar readouts. The older coverage notes below describe the original captures. See the <a href="../tools/zynthian-controller/README.md">current run guide</a>, <a href="../tools/zynthian-controller/controller-node/SCREEN-COVERAGE.md">complete screen map</a> and <a href="../tools/zynthian-controller/runtime/VALIDATION.md">live validation record</a>.</div>
 <div class="stats"><span><b>{len(entries)}</b> screenshots</span><span><b>{len(inventory)}</b> screen inventory entries</span><span><b>1280 × 800</b> capture size</span></div>
 <div class="notice"><strong>Read these as interface captures, not live-system proof.</strong> Every image is rendered from the actual frontend HTML/CSS by Qt WebEngine with explicitly labeled documentation fixtures. Example engines, names, ports and values are not a scan of your hardware. No synth or audio backend was started.</div>
 <button class="hero-image screenshot-button" data-image="01-main-menu" aria-label="Enlarge Main menu">{image_tag(entries[0])}</button>
 <p class="caption">Actual frontend rendering · documentation state · main-menu labels extracted from upstream source</p>
-<h2>Current shape of the project</h2><p>The C++ shell uses <strong>Qt 6 WebEngine + WebChannel</strong>; SDL2 supplies gamepad events. A local adapter reads the existing Zynthian screens and invokes their callbacks. Zynthian’s Python/Tk application, engine manager, native engines, MIDI routing and state management remain underneath. Tk still runs. This frontend introduces no sound engine and imports no Crest Synth or Crest Tracker code.</p>
-<div class="notice amber"><strong>Implementation versus validation:</strong> Clip launching, phrase arrangement, piano-roll editing, CC automation and composite Chain Control now have adapters. This remains an experimental UI port: no live Zynthian audio session or physical controller has been validated, and other custom surfaces remain incomplete.</div></section>
+<h2>Original capture baseline</h2><p>The C++ shell uses <strong>Qt 6 WebEngine + WebChannel</strong>; SDL2 supplies gamepad events. A local adapter reads the existing Zynthian screens and invokes their callbacks. Zynthian’s Python/Tk application, engine manager, native engines, MIDI routing and state management remain underneath. Tk still runs. This frontend introduces no sound engine and imports no Crest Synth or Crest Tracker code.</p>
+<div class="notice amber"><strong>Original capture status (historical):</strong> Clip launching, phrase arrangement, piano-roll editing, CC automation and composite Chain Control now have adapters. This remains an experimental UI port: no live Zynthian audio session or physical controller has been validated, and other custom surfaces remain incomplete.</div></section>
 
 <section id="controls"><div class="eyebrow">01 / OPERATION</div><h2>Controller, keyboard and touch</h2><p>Button names use the standard SDL gamepad layout. A physical controller and Steam Deck input have not been tested.</p>{table(['Action','Gamepad','Keyboard'],controls)}
 <p>In lists, up/down moves between selectable rows. In grids, up/down moves by a row and left/right moves by one item. On a numeric parameter, left/right edits instead. Directional actions repeat while held; activation does not. Input state is cleared on focus loss and controller removal.</p>

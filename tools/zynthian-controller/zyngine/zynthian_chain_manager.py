@@ -59,8 +59,17 @@ ZMIP_SEQ_INDEX = lib_zyncore.zmip_get_seq_index()
 ZMIP_STEP_INDEX = lib_zyncore.zmip_get_step_index()
 ZMIP_INT_INDEX = lib_zyncore.zmip_get_int_index()
 ZMIP_CTRL_INDEX = lib_zyncore.zmip_get_ctrl_index()
-ZMOP_MOD_INDEX = lib_zyncore.zmop_get_mod_index()
-ZMOP_STEP_INDEX = lib_zyncore.zmop_get_step_index()
+if hasattr(lib_zyncore, "zmop_get_mod_index"):
+    ZMOP_MOD_INDEX = lib_zyncore.zmop_get_mod_index()
+    ZMOP_STEP_INDEX = lib_zyncore.zmop_get_step_index()
+else:
+    # The packaged Oram router has 16 channel outputs, MOD, then step output.
+    # Reject unknown layouts rather than silently routing to the wrong port.
+    if NUM_ZMOP_CHAINS != 17:
+        raise RuntimeError("Unsupported legacy MIDI router layout")
+    ZMOP_MOD_INDEX = 16
+    ZMOP_STEP_INDEX = 17
+    MAX_NUM_MIDI_CHANS = 16
 
 engine2class = {
     "ZY": zynthian_engine_zynaddsubfx,

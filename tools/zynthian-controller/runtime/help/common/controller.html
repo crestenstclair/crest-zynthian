@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Controller interface</title></head><body>
+<h1>Zynthian controller interface</h1>
+<p>This HTML interface uses Zynthian's engines, routing, parameters and snapshot files. Choose a view in the left navigation. More screens contains Chain Manager, Add Chain, Chain Control, Banks / Presets, ZS3, Tempo, Audio Player, MIDI Player / Recorder, Audio Levels, MIDI Input, MIDI Output and Administration.</p>
+<h2>Selecting and editing</h2>
+<p>Click an item to activate it. Options opens the selected item's native secondary action. Parameter rows provide minus, plus and direct numeric entry. Toggle parameters change when selected. Screen options opens the current view's menu. Back returns through Zynthian's screen history. Confirmations have separate Cancel and Confirm buttons.</p>
+<h2>Chains and sounds</h2>
+<p>Add Chain creates instruments, audio effects, MIDI effects and other chain types supported by the installed backend. Select an engine, MIDI channel, bank and preset. Chain Control lists processors, parameter pages and routing tabs. Each processor has an Options button; each parameter has its native control options, including MIDI learning, automation CC assignment, value range and X/Y assignment when available.</p>
+<h2>MIDI and audio routing</h2>
+<p>Use a chain's MIDI input to change its MIDI channel, allowed CCs, key range and transposition. Global MIDI Input and MIDI Output list devices and services. Audio input and Audio output select the chain's connections. Mixer exposes native level, balance, mute, solo and other mixer parameters supplied by the backend.</p>
+<h2>Sequencing</h2>
+<p>Sequencer opens the clip and phrase launcher. Select a clip, then use Edit in its context menu. In the piano roll, select a cell and use Note to add or remove a note. The context menu provides note parameters, block operations, undo/redo, pattern settings and CC editing. The CC view edits the selected controller's events. These operations use Zynthian's native sequencer.</p>
+<h2>Playback, recording and sessions</h2>
+<p>Enable audio in the header to hear output in the browser. The main menu contains audio and MIDI recording controls. Audio Player and MIDI Player select recordings and files. Save your work through Snapshots; use ZS3 for subsnapshots. Presets, snapshots and recordings remain in the host data directory.</p>
+<h2>Controller navigation</h2>
+<p>D-pad or left stick moves selection; A selects; B goes back; Y invokes options. Start opens Main Menu. In editors, X plays, left-stick click opens the context menu, and the right stick adjusts note values. Keyboard arrows, Enter and Escape perform basic navigation. Controller layout remains provisional.</p>
+<h2>Host capabilities</h2>
+<p>Administration reflects the running Zynthian backend. Hardware-dependent controls appear when the backend supplies them. Touchscreen calibration requires the physical display. Browser operation does not establish physical MIDI, Pi or Steam Deck compatibility.</p>
+<p>Reference guides: https://wiki.zynthian.org/index.php/Zynthian_Users_Guide and https://help.zynthian.org/ . This page is an original summary for the supplied controller interface.</p>
+</body></html>

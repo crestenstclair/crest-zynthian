@@ -55,6 +55,7 @@ class zynthian_engine_audioplayer(zynthian_engine):
 
     root_bank_dirs = [
         ('User Audio', zynthian_engine.my_data_dir + "/files/Audio"),
+        ('Captured Audio', zynthian_engine.my_data_dir + "/capture"),
         ('User Samples', zynthian_engine.my_data_dir + "/files/Samples"),
         ('System Audio', zynthian_engine.data_dir + "/files/Audio"),
         ('System Samples', zynthian_engine.data_dir + "/files/Samples")
@@ -386,7 +387,7 @@ class zynthian_engine_audioplayer(zynthian_engine):
                 processor = self.id2proc[0]
             except:
                 return
-        bank_dirs = [self.root_bank_dirs[0][1] + "/capture"]
+        bank_dirs = [self.root_bank_dirs[0][1] + "/capture", self.my_data_dir + "/capture"]
         bank_dirs += zynconf.get_external_storage_dirs(zynthian_engine.ex_data_dir)
         wav_fpaths = []
         for bank_dir in bank_dirs:

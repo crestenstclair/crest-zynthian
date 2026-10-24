@@ -3,6 +3,12 @@
 let backend;
 let lastFocus = "";
 let pointerHeld = false;
+let editingParameter = false;
+let focusedControl = null;
+document.addEventListener("focusin", event => {
+  const key = event.target.dataset.focusKey;
+  focusedControl = key && backend ? {key, screen: JSON.parse(backend.state).screen} : null;
+});
 // A playback update must not replace a button between pointer-down and click.
 document.addEventListener("pointerdown", () => { pointerHeld = true; }, true);
 for (const type of ["pointerup", "pointercancel"]) document.addEventListener(type, () => {
@@ -11,7 +17,7 @@ for (const type of ["pointerup", "pointercancel"]) document.addEventListener(typ
 }, true);
 const el = id => document.getElementById(id);
 function render() {
-  if (pointerHeld) return;
+  if (pointerHeld || editingParameter) return;
   const state = JSON.parse(backend.state);
   el("connection").textContent = state.connected ? (state.busy ? "Working…" : "Connected") : "Disconnected";
   el("connection").className = state.connected ? "online" : "offline";
@@ -20,6 +26,11 @@ function render() {
   el("message").textContent = state.connected ? state.message : "Start Zynthian with the webview bridge enabled. The menus will appear when it connects.";
   el("error").textContent = state.error || "";
   el("input-status").textContent = state.inputStatus || "Keyboard / touch";
+  el("transport-status").textContent = recordingStatus(state);
+  renderScreenActions(state);
+  renderScreenContent(state);
+  const navigation = el("navigation-items"); navigation.replaceChildren();
+  for (const [action, label] of Object.entries(state.navigation || {})) navigation.append(inputButton(label, action, state));
   document.body.classList.toggle("sequencing", state.kind === "sequencer");
   el("footer-hints").textContent = state.kind === "sequencer" ?
     "D-pad / L-stick cursor · A act · Y edit · X play · R-stick values · LB + Y menu · LB fine" :
@@ -42,10 +53,12 @@ function render() {
   list.replaceChildren();
   list.className = state.kind === "grid" || state.kind === "keyboard" ? `grid cols-${Math.min(10, state.columns || 1)}` : "list";
   (state.items || []).forEach((item, index) => {
+    const row = node("div", "item-row");
+    row.setAttribute("role", "listitem");
     const button = document.createElement("button");
+    button.dataset.focusKey = `item:${item.id}`;
     button.disabled = !state.connected || state.busy || !item.enabled;
     button.className = "item" + (index === state.selected && (state.kind !== "sequencer" || state.canvasFocus === false) ? " selected" : "") + (!item.enabled ? " divider" : "");
-    button.setAttribute("role", "listitem");
     button.setAttribute("aria-current", index === state.selected ? "true" : "false");
     const label = document.createElement("span");
     label.textContent = item.label;
@@ -61,17 +74,84 @@ function render() {
       button.append(arrow);
     }
     button.addEventListener("click", () => backend.choose(item.id));
-    list.append(button);
+    row.append(button);
+    if (item.kind === "control" && !item.path) {
+      for (const [label, delta] of [["−", -1], ["+", 1]]) {
+        const adjust = node("button", "item-adjust", label);
+        adjust.dataset.focusKey = `adjust:${item.id}:${delta}`;
+        adjust.setAttribute("aria-label", `${delta < 0 ? "Decrease" : "Increase"} ${item.label}`);
+        adjust.disabled = button.disabled;
+        adjust.onclick = event => backend.adjust(item.id, delta, event.shiftKey);
+        row.append(adjust);
+      }
+      if (typeof backend.setValue === "function" && !item.toggle) {
+        const value = document.createElement("input");
+        value.type = "number"; value.value = item.value;
+        value.min = item.minimum; value.max = item.maximum; value.step = item.integer ? "1" : "any";
+        value.setAttribute("aria-label", `Set ${item.label}`); value.disabled = button.disabled;
+        value.onfocus = () => { editingParameter = true; };
+        value.onblur = () => { editingParameter = false; render(); };
+        value.onkeydown = event => { if (event.key === "Enter") value.blur(); };
+        value.onchange = () => { if (value.checkValidity()) backend.setValue(item.id, Number(value.value)); };
+        row.append(value);
+      }
+    }
+    if (item.options) {
+      const options = node("button", "item-options", "Options");
+      options.dataset.focusKey = `options:${item.id}`;
+      options.setAttribute("aria-label", `Options for ${item.label}`);
+      options.disabled = button.disabled;
+      options.onclick = () => backend.activate(item.id, true);
+      row.append(options);
+    }
+    list.append(row);
   });
   list.scrollTop = scroll;
   const focusKey = `${state.screen}:${state.selected}`;
   if (focusKey !== lastFocus) list.querySelector(".selected")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   lastFocus = focusKey;
-  if (menuOpen) list.querySelector(".selected")?.focus({preventScroll: true});
+  const restore = focusedControl && focusedControl.screen === state.screen ?
+    document.querySelector(`[data-focus-key="${CSS.escape(focusedControl.key)}"]`) : null;
+  if (restore && !restore.disabled && (!menuOpen || restore.closest('#menu-panel'))) restore.focus({preventScroll:true});
+  else if (menuOpen) list.querySelector(".selected")?.focus({preventScroll: true});
   const selected = state.items?.[state.selected];
+  el("selection-description").textContent = selected?.description || "";
+  el("selection-actions").hidden = !selected?.options;
   el("parameter").hidden = selected?.kind !== "control" || selected.path;
   el("parameter-label").textContent = selected?.kind === "control" ? `${selected.label} · ${selected.display}` : "";
   for (const button of document.querySelectorAll("[data-action]")) button.disabled = !state.connected || (state.busy && button.dataset.action !== "focus");
+}
+
+function recordingStatus(state) {
+  return [state.transport?.audioRecording && "● Audio recording", state.transport?.midiRecording && "● MIDI recording"].filter(Boolean).join(" · ");
+}
+
+function renderScreenActions(state) {
+  const host = el("screen-actions"); host.replaceChildren();
+  for (const [action, label] of Object.entries(state.screenActions || {})) host.append(inputButton(label, action, state));
+  host.hidden = state.kind === "sequencer" || !state.connected;
+}
+
+function renderScreenContent(state) {
+  const host = el("screen-content"); host.replaceChildren();
+  host.hidden = !state.content;
+  if (!state.content) return;
+  if (state.content.text) host.append(node("div", "screen-text", state.content.text));
+  if (state.content.readouts) {
+    const values = node("dl", "readouts");
+    for (const [name, value] of Object.entries(state.content.readouts)) {
+      values.append(node("dt", "", name.replaceAll("_", " ")), node("dd", "", value));
+    }
+    host.append(values);
+  }
+  if (state.content.type === "keyRange") {
+    const keyboard = node("div", "range-keyboard");
+    for (let note = 0; note < 128; note++) {
+      const key = node("span", note >= state.content.low && note <= state.content.high ? "range-active" : "");
+      key.title = `MIDI ${note}`; keyboard.append(key);
+    }
+    host.append(keyboard);
+  }
 }
 
 function node(tag, cls, text) {
@@ -82,6 +162,7 @@ function node(tag, cls, text) {
 }
 function seqButton(label, action, state) {
   const button = node("button", "seq-button", label);
+  button.dataset.focusKey = `sequence:${action}`;
   button.disabled = state.busy || !state.connected;
   button.addEventListener("click", event => backend.sequence(action, 0, 0, event.shiftKey));
   return button;
@@ -95,6 +176,7 @@ function svgNode(parent, tag, attrs, text) {
 }
 function inputButton(label, action, state) {
   const button = node("button", "seq-button", label);
+  button.dataset.focusKey = `action:${action}`;
   button.disabled = !state.connected || (state.busy && action !== "focus");
   button.addEventListener("click", event => backend.input(action, event.shiftKey));
   return button;
@@ -111,6 +193,7 @@ function renderSequence(state) {
   status.append(inputButton("‹", "back", state));
   status.firstElementChild.setAttribute("aria-label", "Back");
   status.append(node("strong", "seq-title", state.title));
+  if (recordingStatus(state)) status.append(node("span", "recording", recordingStatus(state)));
   const detail = s.type === "launcher" ? (s.moving ? "Moving phrase · A finish" : `${s.phraseCount} phrases`) :
     s.type === "cc" ? `CC${s.cc} · ${s.value}` : s.editMode === 2 || s.editMode === 3 ?
       Object.entries(s.noteValues).map(([k,v],i) => i === s.editParam ? `${k} ${Number(v.toFixed(2))}` : "").filter(Boolean).join("") :
@@ -258,14 +341,9 @@ function bindActions() {
     button.addEventListener("click", event => backend.input(button.dataset.action, event.shiftKey));
   }
 }
-if (typeof qt !== "undefined") {
-  new QWebChannel(qt.webChannelTransport, channel => {
-    backend = channel.objects.zynthian;
+window.attachBackend = model => {
+    backend = model;
     backend.changed.connect(render);
     bindActions();
     render();
-    if (typeof connectComposer === "function") connectComposer(channel);
-  });
-} else {
-  el("message").textContent = "Open this interface with the Zynthian Controller application.";
-}
+};

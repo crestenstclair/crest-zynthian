@@ -10,18 +10,17 @@ class Model : public QObject {
     Q_PROPERTY(QString state READ state NOTIFY changed)
 public:
     explicit Model(QObject* parent = nullptr);
+    ~Model() override;
     void connectTo(const QString& path);
     QString state() const;
     void receiveState(const QJsonObject& state);
     void setInputStatus(const QString& status);
     Q_INVOKABLE void input(const QString& action, bool fine = false);
     Q_INVOKABLE void choose(const QString& id);
+    Q_INVOKABLE void activate(const QString& id, bool bold);
+    Q_INVOKABLE void adjust(const QString& id, int delta, bool fine = false);
     Q_INVOKABLE void sequence(const QString& action, int first = 0, int second = 0, bool fine = false);
-    Q_INVOKABLE void setTextEditing(bool editing) { textEditing_ = editing; }
-    bool textEditing() const { return textEditing_; }
-    Q_INVOKABLE void setNativeMode(bool active) { nativeMode_ = active; }
 signals:
-    void nativeInput(const QString& action, bool fine);
     void changed();
     void commandIssued(const QJsonObject& command);
 private:
@@ -29,7 +28,6 @@ private:
     void read();
     void move(int delta);
     void disconnected();
-    bool nativeMode_ = false, textEditing_ = false;
     QLocalSocket socket_;
     QTimer reconnect_;
     QTimer deadline_;

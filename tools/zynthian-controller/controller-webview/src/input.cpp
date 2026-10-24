@@ -106,7 +106,6 @@ void Input::poll() {
 }
 
 bool Input::eventFilter(QObject*, QEvent* event) {
-    if (model_.textEditing()) return false;
     if (!active_ || (event->type() != QEvent::KeyPress && event->type() != QEvent::KeyRelease)) return false;
     const auto* key = static_cast<QKeyEvent*>(event);
     QString action;
@@ -126,6 +125,7 @@ bool Input::eventFilter(QObject*, QEvent* event) {
     case Qt::Key_F4: action = "bold"; break;
     case Qt::Key_F5: action = "menu"; break;
     case Qt::Key_F6: action = "launcher"; break;
+    case Qt::Key_F7: action = "block"; break;
     case Qt::Key_Space: action = "play"; break;
     case Qt::Key_R: action = "record"; break;
     case Qt::Key_Tab: action = "focus"; break;
