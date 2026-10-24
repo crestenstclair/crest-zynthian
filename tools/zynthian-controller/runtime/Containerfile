@@ -1,0 +1,10 @@
+# Uses an already installed runtime; never fetches source repositories.
+ARG BASE_IMAGE=localhost/zynthian-web:oram
+FROM ${BASE_IMAGE}
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends qt6-base-dev qt6-webengine-dev qt6-webchannel-dev libsdl2-dev \
+    && rm -rf /var/lib/apt/lists/*
+COPY . /opt/controller/
+RUN cmake -S /opt/controller/controller-webview -B /opt/controller/controller-webview/build -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build /opt/controller/controller-webview/build -j4
+USER 1000:1000

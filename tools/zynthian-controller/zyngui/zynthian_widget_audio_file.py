@@ -1,0 +1,1242 @@
+# -*- coding: utf-8 -*-
+# ******************************************************************************
+# ZYNTHIAN PROJECT: Zynthian GUI
+#
+# Zynthian Widget Class for audio file selectors
+#
+# Copyright (C) 2015-2026 Fernando Moyano <jofemodo@zynthian.org>
+#                         Brian Walton <riban@zynthian.org>
+#
+# ******************************************************************************
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of
+# the License, or any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# For a full copy of the GNU General Public License see the LICENSE.txt file.
+#
+# ******************************************************************************
+
+import os
+import math
+import logging
+import tkinter
+import soundfile
+import traceback
+from math import modf, pow
+from threading import Thread
+from os.path import basename
+from collections import namedtuple
+
+import moderngl
+import numpy as np
+from moderngl_window.context.tk.window import ModernglTkWindow
+
+# Zynthian specific modules
+from zynlibs.zynseq import zynseq
+from zyngine.zynthian_signal_manager import zynsigman
+from zyngui import zynthian_gui_config
+from zyngui import zynthian_widget_base
+
+
+
+def hexcolor_to_opengl(hex_str):
+    hex_str = hex_str.lstrip('#')
+    r = int(hex_str[0:2], 16) / 255.0
+    g = int(hex_str[2:4], 16) / 255.0
+    b = int(hex_str[4:6], 16) / 255.0
+    return [r, g, b]
+
+
+# Vector/stroke font for marker number labels.
+def _arc(cx, cy, rx, ry, a0, a1, n):
+    """ Sample n+1 points along an elliptical arc from angle a0 to a1 (degrees) """
+    pts = []
+    for i in range(n + 1):
+        t = math.radians(a0 + (a1 - a0) * i / n)
+        pts.append((cx + rx * math.cos(t), cy + ry * math.sin(t)))
+    return pts
+
+
+def _build_digit_strokes():
+    strokes = {
+        '0': [_arc(0.5, 0.5, 0.38, 0.47, 90, 450, 16)],
+        '1': [
+            [(0.30, 0.80), (0.55, 1.0), (0.55, 0.0)],
+            [(0.30, 0.0), (0.80, 0.0)],
+        ],
+        '2': [
+            _arc(0.5, 0.80, 0.38, 0.20, 200, -20, 7) + [(0.12, 0.02), (0.90, 0.02)],
+        ],
+        '3': [
+            [(0.16, 0.88), (0.46, 1.00), (0.76, 0.90), (0.85, 0.72), (0.68, 0.55),
+             (0.35, 0.52), (0.68, 0.48), (0.85, 0.30), (0.76, 0.10), (0.46, 0.00), (0.16, 0.12)],
+        ],
+        '4': [
+            [(0.65, 1.0), (0.12, 0.35), (0.90, 0.35)],
+            [(0.65, 1.0), (0.65, 0.0)],
+        ],
+        '5': [
+            [(0.85, 0.98), (0.12, 0.98), (0.12, 0.55)]
+            + _arc(0.45, 0.32, 0.40, 0.28, 150, -170, 8),
+        ],
+        '6': [
+            [(0.78, 0.95), (0.45, 0.88), (0.22, 0.65), (0.15, 0.38)],
+            _arc(0.5, 0.27, 0.33, 0.26, 0, 360, 12),
+        ],
+        '7': [
+            [(0.08, 0.98), (0.92, 0.98), (0.30, 0.0)],
+        ],
+        '8': [
+            _arc(0.5, 0.73, 0.30, 0.25, 0, 360, 10),
+            _arc(0.5, 0.27, 0.34, 0.27, 0, 360, 10),
+        ],
+        '9': [
+            _arc(0.5, 0.68, 0.33, 0.26, 0, 360, 12),
+            [(0.78, 0.55), (0.60, 0.25), (0.38, 0.02)],
+        ],
+    }
+    return strokes
+
+
+MAX_DIGITS_PER_NUMBER = 3
+DIGIT_STROKES = _build_digit_strokes()
+SEGMENTS_PER_DIGIT = max(
+    sum(len(stroke) - 1 for stroke in strokes) for strokes in DIGIT_STROKES.values()
+)
+
+# Label sizing/placement - defined in pixels and converted per-axis to NDC at draw time
+DIGIT_HEIGHT_PX = 12
+DIGIT_WIDTH_PX = 7
+DIGIT_GAP_PX = 2             # Horizontal gap between digits within the same number
+DIGIT_BOTTOM_MARGIN_PX = 3   # Gap from the bottom edge of the canvas to the digits
+DIGIT_LINE_GAP_PX = 3        # Gap between the top of a digit and the marker line above it
+MIN_LABEL_GAP_PX = 5         # Minimum pixel gap required between adjacent number labels, else hide next label
+
+
+# Single source of truth for the vertex buffer layout
+Layout = namedtuple("Layout", [
+    "axis_start", "axis_count",
+    "wave_start", "wave_count",
+    "markers_start", "markers_count",
+    "digits_start", "digits_count",
+    "crop_start", "loop_start", "cursor_start",
+    "total",
+])
+
+
+def compute_layout(nchans, width):
+    """ Computes layout
+    
+    Params
+        nchans: Number of channels
+        width:  Display width in pixels
+    """
+    axis_count = nchans * 2
+    wave_count = 2 * nchans * width
+    markers_count = 2 * (width // 16)
+    max_markers = max(1, width // 16)
+    digits_count = max_markers * MAX_DIGITS_PER_NUMBER * SEGMENTS_PER_DIGIT * 2
+    axis_start = 0
+    wave_start = axis_start + axis_count
+    markers_start = wave_start + wave_count
+    digits_start = markers_start + markers_count
+    crop_start = digits_start + digits_count
+    loop_start = crop_start + 12
+    cursor_start = loop_start + 18
+    total = cursor_start + 6
+    return Layout(axis_start, axis_count, wave_start, wave_count,
+                  markers_start, markers_count, digits_start, digits_count,
+                  crop_start, loop_start, cursor_start, total)
+
+
+class WaveformCanvas(ModernglTkWindow):
+
+    def __init__(self, *args, **kwargs):
+        # Define variables that ModernGL-Window expects
+        self.ctx = None
+        self.prog = None
+        self.vbo = None
+        self.vao = None
+        self.size_changed = False
+
+        self.channels = 0
+        self.n_vertex = 0
+        self.layout = None  # Layout namedtuple for the current (channels, width)
+        self.vbo_data = None
+        self.touched = False
+        self.dirty_lo = None  # Start of the byte range that changed since last upload
+        self.dirty_hi = None  # End changed range (exclusive, in vertex units)
+
+        # Configure colours
+        self.bg_color = hexcolor_to_opengl(zynthian_gui_config.color_bg)
+        self.waveform_color1 = hexcolor_to_opengl(zynthian_gui_config.color_variant(zynthian_gui_config.color_hl, -60))
+        self.waveform_color2 = hexcolor_to_opengl(zynthian_gui_config.color_hl)
+        self.playcur_color = hexcolor_to_opengl(zynthian_gui_config.color_on)
+        self.bg_crop_color = hexcolor_to_opengl(zynthian_gui_config.color_variant(zynthian_gui_config.color_panel_bg, 25))
+        self.lmarker_color = hexcolor_to_opengl(zynthian_gui_config.color_ml)
+        self.bg_loop_color = hexcolor_to_opengl(zynthian_gui_config.color_variant(zynthian_gui_config.color_ml, -150))
+        self.bmarker_color = hexcolor_to_opengl(zynthian_gui_config.color_tx)
+        self.axis_color = hexcolor_to_opengl(zynthian_gui_config.color_variant(zynthian_gui_config.color_tx, -80))
+
+        super().__init__(*args, **kwargs)
+        #self.animate = True
+
+        self.bind("<Configure>", self.on_resize)
+
+    def initgl(self):
+        #self.tkMakeCurrent()
+        try:
+            self.ctx = moderngl.create_context(require=140)
+        except Exception as e:
+            logging.error(f"Failed to create ModernGL context: {e}")
+            raise
+
+        vertex_shader = """
+            #version 140
+
+            in vec3 in_position;
+            in vec3 in_color;
+            out vec3 v_color;
+
+            void main() {
+                gl_Position = vec4(in_position, 1.0);
+                v_color = in_color;
+            }
+        """
+        fragment_shader = """
+            #version 140
+
+            in vec3 v_color;
+            out vec4 f_color;
+
+            void main() {
+                f_color = vec4(v_color, 1.0);
+            }
+        """
+        self.ctx.clear_color = (*self.bg_color, 1.0)
+        self.ctx.enable(moderngl.DEPTH_TEST)
+        self.ctx.depth_func = '<'
+
+        # Mezcla/Blending para el suavizado
+        self.ctx.enable(moderngl.BLEND)
+        self.ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
+
+        self.prog = self.ctx.program(vertex_shader=vertex_shader, fragment_shader=fragment_shader)
+
+    def on_resize(self, event):
+        self.width = self.winfo_width()    #event.width
+        self.height = self.winfo_height()  #event.height
+        self.size_changed = True
+
+    def mark_dirty(self, i0, i1):
+        """ Mark a section of data dirty to force update
+        
+        Params:
+            i0: Lower byte range limit
+            i1: Upper byte range limit
+        """
+        self.touched = True
+        self.dirty_lo = i0 if self.dirty_lo is None else min(self.dirty_lo, i0)
+        self.dirty_hi = i1 if self.dirty_hi is None else max(self.dirty_hi, i1)
+
+    def reset_dirty(self):
+        self.touched = False
+        self.dirty_lo = None
+        self.dirty_hi = None
+
+    def init_channels(self, nchans=None):
+        if not self.ctx or not self.prog:
+            return False
+
+        if nchans is None:
+            nchans = self.channels
+        if nchans == 0:
+            self.channels = 0
+            self.n_vertex = 0
+            self.layout = None
+            self.vbo_data = None
+            if self.vbo:
+                self.vbo.release()
+                self.vbo = None
+            self.vao = None
+            self.touched = True
+            self.dirty_lo = None
+            self.dirty_hi = None
+            return True
+
+        layout = compute_layout(nchans, self.width)
+        if self.vbo_data is None or nchans != self.channels or layout.total != self.n_vertex:
+            logging.debug(f"Resetting VBO & VAO => {nchans}, {self.width}")
+            self.channels = nchans
+            self.layout = layout
+            self.n_vertex = layout.total
+
+            # Vertex data matrix
+            self.vbo_data = np.zeros(self.n_vertex, dtype=[
+                ('pos', 'f4', 3),
+                ('col', 'f4', 3)
+            ])
+
+            # Initialize axis lines data
+            i0 = layout.axis_start
+            i1 = layout.wave_start
+            y_coords = []
+            yaxix = -1.0 + 1.0 / self.channels
+            for ch in range(self.channels):
+                y_coords.append(yaxix)
+                yaxix += 2.0 / self.channels
+            self.vbo_data['pos'][i0:i1:2, 0] = -1.0
+            self.vbo_data['pos'][i0+1:i1:2, 0] = 1.0
+            self.vbo_data['pos'][i0:i1, 1] = np.repeat(y_coords, 2)
+            self.vbo_data['pos'][i0:i1, 2] = 0.5
+            self.vbo_data['col'][i0:i1] = self.waveform_color2
+
+            # Initialize waveform X coords
+            i0 = layout.wave_start
+            i1 = layout.markers_start
+            x_coords = np.linspace(-1.0, 1.0, self.width, dtype=np.float32)
+            self.vbo_data['pos'][i0:i1, 0] = np.repeat(x_coords, 2 * self.channels)
+            self.vbo_data['col'][i0:i1:2] = self.waveform_color1
+            self.vbo_data['col'][i0+1:i1:2] = self.waveform_color2
+
+            # Initialize markers & cursor
+            i0 = layout.markers_start
+            i1 = layout.digits_start
+            self.vbo_data['col'][i0:i1] = self.bmarker_color
+
+            # Initialize labels
+            self.vbo_data['pos'][layout.digits_start:layout.crop_start] = [2.0, 2.0, 0.0]
+            self.vbo_data['col'][layout.digits_start:layout.crop_start] = self.bmarker_color
+
+            self.vbo_data['col'][layout.crop_start:layout.loop_start] = self.bg_crop_color
+            self.vbo_data['col'][layout.loop_start:layout.loop_start + 12] = self.lmarker_color
+            self.vbo_data['col'][layout.loop_start + 12:layout.cursor_start] = self.bg_loop_color
+            self.vbo_data['col'][layout.cursor_start:] = self.playcur_color
+
+            # Create VBO & VAO in ModernGL
+            if self.vbo:
+                self.vbo.release()
+
+            self.vbo = self.ctx.buffer(self.vbo_data.tobytes(), dynamic=True)
+            self.vao = self.ctx.vertex_array(
+                self.prog,
+                [(self.vbo, '3f 3f', 'in_position', 'in_color')],
+            )
+            self.dirty_lo = 0
+            self.dirty_hi = 4
+            self.touched = True
+        return True
+
+    def set_wave_data(self, ydata):
+        try:
+            i0 = self.layout.wave_start
+            i1 = i0 + self.layout.wave_count
+            self.vbo_data['pos'][i0:i1, 1] = (2 * np.array(ydata, dtype=np.float32) / self.height) - 1.0
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't set wave data ... => {e}")
+
+    def reset_wave_data(self, ydata):
+        try:
+            i0 = self.layout.wave_start
+            i1 = i0 + self.layout.wave_count
+            self.vbo_data['pos'][i0:i1, 1] = 0.0
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't reset wave data ... => {e}")
+
+    def _label_row_bottom_ndc(self):
+        """ Bottom y (NDC) of the digit label row, converted from a fixed pixel margin """
+        return -1.0 + 2.0 * DIGIT_BOTTOM_MARGIN_PX / self.height
+
+    def _marker_line_bottom_ndc(self):
+        """ Bottom y (NDC) where beat-marker lines should stop, leaving clear space above the label row so the line never overlaps a label """
+        label_area_px = DIGIT_BOTTOM_MARGIN_PX + DIGIT_HEIGHT_PX + DIGIT_LINE_GAP_PX
+        return -1.0 + 2.0 * label_area_px / self.height
+
+    def set_beat_markers(self, xdata, coldata):
+        try:
+            i0 = self.layout.markers_start
+            i1 = i0 + 2 * len(xdata)
+            i2 = i0 + self.layout.markers_count
+            if i1 > i0:
+                y_bottom = self._marker_line_bottom_ndc()
+                self.vbo_data['pos'][i0:i1:, 0] = 2 * (np.repeat(xdata, 2)/self.width) - 1.0
+                self.vbo_data['pos'][i0:i1:2, 1] = 1.0
+                self.vbo_data['pos'][i0+1:i1:2, 1] = y_bottom
+                self.vbo_data['pos'][i0:i1:, 2] = -0.75
+                colmatrix = np.array(coldata, dtype=np.float32)
+                self.vbo_data['col'][i0:i1] = np.repeat(colmatrix, 2, axis=0)
+            self.vbo_data['pos'][i1:i2] = 0
+            self.mark_dirty(i0, i2)
+        except Exception as e:
+            logging.error(f"Can't set beat markers ... => {e}")
+
+    def set_marker_numbers(self, xdata, num1):
+        """ Draw a sequential number (starting at 1) below each given marker x position
+
+        Params:
+            xdata: list of marker x positions in canvas pixels, in the order they should be numbered.
+                   The caller is expected to have already excluded any marker that shouldn't be
+                   labeled (e.g. the first marker, which is always at position 0).
+            num1: First number to show
+        """
+        try:
+            i0 = self.layout.digits_start
+            i1 = self.layout.crop_start
+            slot_size = MAX_DIGITS_PER_NUMBER * SEGMENTS_PER_DIGIT * 2
+
+            # Park everything off-screen first so stale digits from a previous frame don't linger
+            self.vbo_data['pos'][i0:i1] = [2.0, 2.0, 0.0]
+            px_to_ndc_x = 2.0 / self.width
+            px_to_ndc_y = 2.0 / self.height
+            digit_h = DIGIT_HEIGHT_PX * px_to_ndc_y
+            digit_w = DIGIT_WIDTH_PX * px_to_ndc_x
+            digit_gap = DIGIT_GAP_PX * px_to_ndc_x
+            y_bottom = self._label_row_bottom_ndc()
+
+            max_markers = (i1 - i0) // slot_size
+            last_right_px = None
+            for n, xpix in enumerate(xdata[:max_markers]):
+                digits = str(num1 + n)[:MAX_DIGITS_PER_NUMBER]
+                label_w_px = len(digits) * DIGIT_WIDTH_PX + (len(digits) - 1) * DIGIT_GAP_PX
+                left_px = xpix - label_w_px / 2
+                right_px = xpix + label_w_px / 2
+
+                # Skip label if overlapping previous
+                if last_right_px is not None and left_px < last_right_px + MIN_LABEL_GAP_PX:
+                    continue
+                last_right_px = right_px
+
+                total_w = len(digits) * digit_w + (len(digits) - 1) * digit_gap
+                x_ndc = (2 * xpix / self.width) - 1.0
+                x_left = x_ndc - total_w / 2
+
+                v = i0 + n * slot_size
+                for di, ch in enumerate(digits):
+                    dx = x_left + di * (digit_w + digit_gap)
+                    for stroke in DIGIT_STROKES.get(ch, []):
+                        for (px0, py0), (px1, py1) in zip(stroke, stroke[1:]):
+                            self.vbo_data['pos'][v] = [dx + px0 * digit_w, y_bottom + py0 * digit_h, -0.9]
+                            v += 1
+                            self.vbo_data['pos'][v] = [dx + px1 * digit_w, y_bottom + py1 * digit_h, -0.9]
+                            v += 1
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't set marker numbers ... => {e}")
+
+    def set_crop_markers(self, x1, x2):
+        try:
+            i0 = self.layout.crop_start
+            i1 = i0 + 12
+            x1 = (2 * x1 / self.width) - 1.0
+            x2 = (2 * x2 / self.width) - 1.0
+            self.vbo_data['pos'][i0:i1, 0] = np.array([-1.0, -1.0, x1, x1, x1, -1.0, 1.0, 1.0, x2, x2, x2, 1.0], dtype=np.float32)
+            self.vbo_data['pos'][i0:i1, 1] = np.array([-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0], dtype=np.float32)
+            self.vbo_data['pos'][i0:i1, 2] = 0.5
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't set crop markers ... => {e}")
+
+    def set_loop_markers(self, x1, x2):
+        try:
+            i0 = self.layout.loop_start
+            i1 = i0 + 18
+            x1 = (2 * x1 / self.width) - 1.0
+            x2 = (2 * x2 / self.width) - 1.0
+            w = 2 / self.width
+            x11 = x1 - w
+            x22 = x2 + w
+            self.vbo_data['pos'][i0:i1, 0] = np.array([x11, x11, x1, x1, x1, x11, x22, x22, x2, x2, x2, x22, x1, x1, x2, x1, x2, x2], dtype=np.float32)
+            self.vbo_data['pos'][i0:i1, 1] = np.array([-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0], dtype=np.float32)
+            self.vbo_data['pos'][i0:i0 + 12, 2] = -0.5
+            self.vbo_data['pos'][i0 + 12:i1, 2] = 0.6
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't set crop markers ... => {e}")
+
+    def reset_loop_markers(self):
+        try:
+            i0 = self.layout.loop_start
+            i1 = i0 + 18
+            self.vbo_data['pos'][i0:i1] = 0
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't reset crop markers ... => {e}")
+
+    def set_cursor_pos(self, xpos):
+        try:
+            i0 = self.layout.cursor_start
+            i1 = i0 + 6
+            x = (2 * xpos / self.width) - 1.0
+            w = 2 / self.width
+            x1 = x - w
+            x2 = x + w
+            self.vbo_data['pos'][i0:i1, 0] = np.array([x1, x1, x2, x2, x2, x1], dtype=np.float32)
+            self.vbo_data['pos'][i0:i1, 1] = np.array([-1.0, 1.0, -1.0, -1.0, 1.0, 1.0], dtype=np.float32)
+            # z=-0.8 puts the playhead behind the digit strokes (z=-0.9, which wins the depth
+            # test since depth_func='<'), so it passes behind the number labels instead of over them,
+            # while still drawing in front of the waveform/crop/loop geometry (z >= -0.75)
+            self.vbo_data['pos'][i0:i1, 2] = -0.8
+            self.mark_dirty(i0, i1)
+        except Exception as e:
+            logging.error(f"Can't set cursor position ... => {e}")
+
+    def redraw(self, reset=True):
+        if self.touched:
+            if self.vbo and self.dirty_lo is not None:
+                stride = self.vbo_data.itemsize
+                byte_offset = self.dirty_lo * stride
+                chunk = self.vbo_data[self.dirty_lo:self.dirty_hi].tobytes()
+                self.vbo.write(chunk, offset=byte_offset)
+            self.ctx.clear()
+            if self.vao and self.layout:
+                tri_start = self.layout.crop_start
+                # Dibujar líneas
+                self.vao.render(moderngl.LINES, first=0, vertices=tri_start)
+                # Dibujar Quads using native Triangles
+                self.vao.render(moderngl.TRIANGLES, first=tri_start, vertices=self.n_vertex - tri_start)
+            if reset:
+                self.reset_dirty()
+
+    def set_viewport(self):
+        # Bind the OpenGL rendering context to this X11 frame container
+        self.tkMakeCurrent()
+        # Set CTX viewport only if size changed
+        if self.size_changed and self.ctx:
+            self.size_changed = False
+            self.ctx.viewport = (0, 0, self.width, self.height)
+            logging.debug(f"Setting viewport to {self.width}x{self.height}")
+
+    def update(self):
+        self.set_viewport()
+        if self.touched:
+            #logging.debug(f" => DIRTY from {self.dirty_lo} to {self.dirty_hi}")
+            # Draw
+            self.redraw()
+            # Force the GPU to flush instructions and swap the front/back buffers
+            self.tkSwapBuffers()
+
+    def clear(self):
+        self.set_viewport()
+        self.ctx.clear()
+        self.tkSwapBuffers()
+
+# ------------------------------------------------------------------------------
+# Zynthian Widget Class for audio file selectors
+# ------------------------------------------------------------------------------
+
+class zynthian_widget_audio_file(zynthian_widget_base.zynthian_widget_base):
+
+    # MAX_FRAMES = 2880000
+
+    # Type of engine integration
+    ENG_NONE = 0
+    ENG_CLIPPY = 1
+    ENG_GLOBAL_AP = 2
+    ENG_CHAIN_AP = 3
+    ENG_SAMPLV1 = 4
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        # Take only half height
+        self.rows //= 2
+
+        self.clip_info = None
+        self.eng_type = self.ENG_NONE
+
+        self.zctrl = None
+        self.fpath = None
+        self.fname = ""
+        self.wave_data = None   # Wave data => All file data loaded in memory
+        self.channels = 0       # Quantity of channels in audio
+        self.frames = 0         # Quantity of frames in audio
+        self.samplerate = None  # Sample Rate (frames/second)
+        self.duration = 0.0     # Duration in seconds
+        self.info = 0
+
+        self.first_update = True
+        self.loading = False    # Flag to avoid multiple threads loading waveform
+        self.refreshing = False # Flag to avoid multiple threads refreshing waveform
+        self.refresh_waveform = False  # True to force redraw of waveform on next refresh
+        self.update_markers = False  # True to force update markers on next refresh
+        self.waveform_height = 1  # ratio of height for y offset of zoom overview display
+        self.offset = 0  # Frames from start of file that waveform display starts
+        self.auto_offset = 0 # 1 to calc offset from crop_start. 2 to calc offest from crop_end.
+        self.zoom = 1
+        self.vzoom = 1
+        self.crop_start = 0
+        self.crop_end = 0
+        self.loop_markers = False
+        self.loop_start = 0
+        self.loop_end = 0
+        self.beats = 0
+        self.warp = False
+        self.gain = 1
+        self.last_cursor_pos = 0
+
+        self.bmarker_color1 = hexcolor_to_opengl(zynthian_gui_config.color_tx)
+        self.bmarker_color2 = hexcolor_to_opengl(zynthian_gui_config.color_variant(zynthian_gui_config.color_tx, -80))
+        self.font_info = tkinter.font.Font(font=("DejaVu Sans Mono", int(1.0 * zynthian_gui_config.font_size)))
+
+        self.rowconfigure(0, weight=1)     # Row 0 (Canvas) expands to fill all remaining space
+        self.rowconfigure(1, weight=0)     # Row 1 (Label) stays locked to its content height
+        self.columnconfigure(0, weight=1)  # Expand fully horizontally
+
+        self.widget_canvas = WaveformCanvas(self,
+                                            bd=0,
+                                            highlightthickness=0,
+                                            relief='flat',
+                                            bg=zynthian_gui_config.color_bg)
+        self.widget_canvas.bind('<ButtonPress-1>', self.on_canvas_press)
+        self.widget_canvas.bind('<B1-Motion>', self.on_canvas_drag)
+        self.widget_canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
+        self.widget_canvas.bind("<Button-4>", self.on_wheel)
+        self.widget_canvas.bind("<Button-5>", self.on_wheel)
+        self.widget_canvas.grid(row=0, column=0, sticky='news')
+
+        self.info_text_var = tkinter.StringVar()
+        self.info_text_var.set("No waveform loaded")
+        self.info_text = tkinter.Label(self,
+                                       textvar=self.info_text_var,
+                                       bg=zynthian_gui_config.color_panel_bg,
+                                       fg=zynthian_gui_config.color_tx,
+                                       font=self.font_info,
+                                       anchor=tkinter.E,
+                                       padx=5, pady=2)
+        self.info_text.grid(row=1, column=0, sticky='news')
+
+    def set_processor(self, processor):
+        super().set_processor(processor)
+        if self.zyngui_control.widget_zctrl:
+            self.zctrl = self.zyngui_control.widget_zctrl
+        else:
+            try:
+                note = self.processor.engine.selected_phrase + 1
+                self.zctrl = self.processor.controllers_dict[f"file {note}"]
+            except:
+                self.zctrl = None
+                for zctrl in self.processor.controllers_dict.values():
+                    if zctrl.is_path:
+                        self.zctrl = zctrl
+                        break
+        # Determine type of engine
+        self.eng_type = self.ENG_NONE
+        self.clip_info = None
+        if self.processor:
+            if self.processor.eng_code == "CL":
+                self.eng_type = self.ENG_CLIPPY
+                self.clip_info = self.get_clippy_info()
+            elif self.processor.eng_code == "AP":
+                self.processor.engine.set_monitored_processor(self.processor)
+                if self.processor.id < 0:
+                    self.eng_type = self.ENG_GLOBAL_AP
+                else:
+                    self.eng_type = self.ENG_CHAIN_AP
+            elif self.processor.eng_code == "JV/samplv1":
+                self.eng_type = self.ENG_SAMPLV1
+
+    def show(self):
+        #self.loading = False
+        self.refreshing = False
+        super().show()
+        if self.eng_type:
+            zynsigman.register_queued(zynsigman.S_AUDIO_RECORDER, zynsigman.SS_AUDIO_RECORDER_STATE, self.audio_recorder_cb)
+
+    def hide(self):
+        if self.eng_type:
+            zynsigman.unregister(zynsigman.S_AUDIO_RECORDER, zynsigman.SS_AUDIO_RECORDER_STATE, self.audio_recorder_cb)
+        super().hide()
+
+    def on_size(self, event):
+        if event.width == self.width and event.height == self.height:
+            return
+        super().on_size(event)
+
+    def on_canvas_press(self, event):
+        pass
+
+    def on_canvas_drag(self, event):
+        pass
+
+    def on_canvas_release(self, event):
+        pass
+
+    def on_wheel(self, event):
+        """ Handle mouse wheel events to navigate the graph.
+        Args:
+            event: The mouse wheel event.
+        """
+
+        try:
+            if event.num == 5 or event.delta == -120:
+                self.processor.controllers_dict['zoom'].nudge(-1)
+            elif event.num == 4 or event.delta == 120:
+                self.processor.controllers_dict['zoom'].nudge(1)
+        except:
+            pass
+
+    def load_file(self):
+        # Run as background thread
+        if self.loading:
+            return
+        self.loading = True
+        if self.fpath:
+            self.info_text_var.set("Loading waveform ...")
+            try:
+                self.duration = 0.0
+                self.offset = 0
+                self.auto_offset = 0
+                with soundfile.SoundFile(self.fpath) as sf:
+                    self.channels = sf.channels
+                    self.samplerate = sf.samplerate
+                    self.frames = sf.seek(0, soundfile.SEEK_END)
+                    sf.seek(0)
+                    self.wave_data = sf.read(self.frames, always_2d=True)
+                if self.samplerate:
+                    self.duration = self.frames / self.samplerate
+                logging.debug(f"Loaded waveform {self.fpath} => {self.frames} frames at {self.samplerate}")
+                if self.clip_info:
+                    self.get_clippy_values()
+                else:
+                    self.crop_start = 0
+                    self.crop_end = self.frames
+                self.refresh_waveform = True
+            except MemoryError:
+                logging.warning(f"Can't display waveform: File too large!")
+                self.info_text_var.set("File too large!")
+                self.channels = 0
+                self.frames = 0
+                self.wave_data = None
+            except Exception as e:
+                logging.warning(f"Can't display waveform: {e}")
+                self.info_text_var.set("Display error!")
+                self.channels = 0
+                self.frames = 0
+                self.wave_data = None
+        else:
+            self.info_text_var.set("No file!")
+            self.channels = 0
+            self.frames = 0
+            self.wave_data = None
+        self.loading = False
+
+    def draw_waveform(self, start, length, vzoom=1.0):
+        if self.wave_data is None:
+            self.info_text_var.set("No data!")
+            return False
+
+        length = min(self.frames, length)
+        steps_per_peak = 16
+
+        self.waveform_height = self.widget_canvas.winfo_height()
+        if self.channels:
+            y0 = self.waveform_height // self.channels
+        else:
+            y0 = self.waveform_height
+        y_offsets = []
+        for i in range(self.channels):
+            y_offsets.append(y0 * (i + 0.5))
+        y0 = int(vzoom * y0 / 2)
+
+        frames_per_pixel = length // self.width
+        if frames_per_pixel <= 0:
+            frames_per_pixel = 1
+        block_size = min(frames_per_pixel, 1024)
+        step = max(1, block_size // steps_per_peak)
+
+        start = min(start, (self.frames - length))
+        # Align start to block size avoid flickering when scrolling wave
+        start = (start // frames_per_pixel) * frames_per_pixel
+
+        ydata = [0] * 2 * self.channels * self.width
+        pos = 0
+        waveform_size = len(self.wave_data)
+        for x in range(self.width):
+            # For each x-axis pixel
+            offset1 = start + x * frames_per_pixel
+            offset2 = min(waveform_size, offset1 + frames_per_pixel)
+            for chan in range(self.channels):
+                # For each audio channel
+                v1 = [0.0] * self.channels
+                v2 = [0.0] * self.channels
+                frame = offset1
+                while int(frame) < int(offset2):
+                    # Find peak audio within block of audio represented by this x-axis pixel
+                    av = self.wave_data[int(frame)][chan]
+                    if av < v1[chan]:
+                        v1[chan] = av
+                    if av > v2[chan]:
+                        v2[chan] = av
+                    frame += step
+                ymin = y_offsets[chan] + v1[chan] * y0
+                ymax = y_offsets[chan] + v2[chan] * y0
+                if v2[chan] == 0:
+                    ydata[pos] = ymax
+                    ydata[pos + 1] = ymin
+                else:
+                    ydata[pos] = ymin
+                    ydata[pos + 1] = ymax
+                pos += 2
+
+        self.widget_canvas.set_wave_data(ydata)
+        return True
+
+    def refresh_gui(self):
+        if not self.widget_canvas.prog:
+            #logging.debug("Waiting for OpenGL context...")
+            return
+        if not self.zctrl and not self.eng_type:
+            return
+        if self.loading or self.refreshing:
+            return
+
+        self.refreshing = True
+
+        # Path zctrl => Clippy, samplv1 and others
+        if self.zctrl:
+            fpath = self.zctrl.value
+        # Filename in monitors => AudioPlayer
+        elif "filename" in self.monitors:
+            fpath = self.monitors["filename"]
+        else:
+            fpath = None
+
+        # No Audio File => Reset data and clear widget canvas.
+        if self.fpath != "" and (not fpath or fpath == "_"):
+            self.fpath = ""
+            self.fname = ""
+            self.channels = 0
+            self.frames = 0
+            self.duration = 0
+            self.samplerate = None
+            self.widget_canvas.init_channels(0)
+            self.widget_canvas.clear()
+            self.refreshing = False
+            logging.debug(f"Cleaning Waveform Widget!")
+            return
+        # Audio file changed so reload waveform from file audio data
+        elif fpath and (self.fpath != fpath):
+            self.fpath = fpath
+            self.fname = basename(self.fpath)
+            waveform_thread = Thread(target=self.load_file, name="load_waveform")
+            waveform_thread.start()
+            self.refreshing = False
+            logging.debug(f"Loading Waveform File ...")
+            return
+
+        # Ensure widget canvas is initialized
+        if not self.widget_canvas.init_channels(self.channels):
+            logging.warning(f"Can't init widget canvas channels!")
+            self.refreshing = False
+            return
+
+        # Get parameters from engine ...
+        zoom = offset = crop_start = crop_end = loop_markers = loop_start = loop_end = warp = beats = gain = vzoom = cursor_pos = None
+        match self.eng_type:
+            # Clippy =>
+            case self.ENG_CLIPPY:
+                loop_markers = False
+                if "zoom" in self.monitors:
+                    zoom = self.monitors["zoom"]
+                if "offset" in self.monitors:
+                    offset = self.monitors["offset"]
+                if "crop_start" in self.monitors:
+                    crop_start = self.monitors["crop_start"]
+                if "crop_end" in self.monitors:
+                    crop_end = self.monitors["crop_end"]
+                if "warp" in self.monitors:
+                    warp = self.monitors["warp"]
+                if "beats" in self.monitors:
+                    beats = self.monitors["beats"]
+                if "gain" in self.monitors:
+                    gain = self.monitors["gain"]
+                    vzoom = pow(1.26, gain)       # Calculate vzoom from gain in dB
+                if self.frames and self.clip_info:
+                    clip_state = self.zyngui.state_manager.zynseq.libseq.getPlayState(self.clip_info[0], self.clip_info[1], self.clip_info[2])
+                    if clip_state == 1:
+                        cursor_pos = self.zyngui.state_manager.zynseq.progress[self.zctrl.processor.midi_chan] / 100.0
+                        try:
+                            cursor_frame = self.crop_start + int(cursor_pos * (self.crop_end - self.crop_start))
+                            offset = cursor_frame - self.frames // (self.zoom * 2)
+                        except Exception as e:
+                            pass
+                    else:
+                        cursor_pos = 0.0
+            # AudioPlayer =>
+            case self.ENG_GLOBAL_AP | self.ENG_CHAIN_AP:
+                if self.samplerate:
+                    loop_markers = False
+                    zoom = self.processor.controllers_dict['zoom'].value
+                    offset = int(self.samplerate * self.processor.controllers_dict['offset'].value)
+                    crop_start = self.processor.controllers_dict['crop start'].value
+                    crop_end = self.processor.controllers_dict['crop end'].value
+                    beats = 0
+                    gain = self.processor.controllers_dict['gain'].value    # Linear gain
+                    vzoom = gain * self.processor.controllers_dict['v-zoom'].value
+                    dur = crop_end - crop_start
+                    if dur > 0:
+                        pos = self.processor.controllers_dict['position'].value
+                        cursor_pos = (pos - crop_start) / dur
+                    else:
+                        cursor_pos = 0
+                    crop_start = int(self.samplerate * crop_start)
+                    crop_end = int(self.samplerate * crop_end)
+                    if self.monitors["update_cue"]:
+                        self.update_markers = True
+                        self.monitors["update_cue"] = False
+            # samplv1 =>
+            case self.ENG_SAMPLV1:
+                zoom = 1
+                offset = 0
+                beats = 0
+                crop_enabled = self.processor.controllers_dict['GEN1_OFFSET'].value
+                if crop_enabled:
+                    crop_start = int(self.frames * self.processor.controllers_dict['GEN1_OFFSET_1'].value)
+                    crop_end = int(self.frames * self.processor.controllers_dict['GEN1_OFFSET_2'].value)
+                else:
+                    crop_start = 0
+                    crop_end = self.frames
+                loop_markers = self.processor.controllers_dict['GEN1_LOOP'].value
+                if loop_markers:
+                    loop_start = int(self.frames * self.processor.controllers_dict['GEN1_LOOP_1'].value)
+                    loop_end = int(self.frames * self.processor.controllers_dict['GEN1_LOOP_2'].value)
+                vzoom = 2.0 * self.processor.controllers_dict['OUT1_VOLUME'].value
+
+            # Others =>
+            case _:
+                zoom = 1
+                offset = 0
+                beats = 0
+
+        # Process parameter changes
+        if zoom is not None and zoom != self.zoom:
+            self.zoom = zoom
+            self.refresh_waveform = True
+        if offset is not None and offset != self.offset:
+            self.offset = offset
+            self.refresh_waveform = True
+            self.auto_offset = 0
+        #elif self.auto_offset == 0:
+        #    self.auto_offset = 1
+        if crop_start is not None and crop_start != self.crop_start:
+            self.crop_start = crop_start
+            self.update_markers = True
+            if self.auto_offset:
+                self.auto_offset = 1
+        if crop_end is not None and crop_end != self.crop_end:
+            self.crop_end = crop_end
+            self.update_markers = True
+            if self.auto_offset:
+                self.auto_offset = 2
+        if loop_markers is not None and loop_markers != self.loop_markers:
+            self.loop_markers = loop_markers
+            self.update_markers = True
+        if self.loop_markers:
+            if loop_start is not None and loop_start != self.loop_start:
+                self.loop_start = loop_start
+                self.update_markers = True
+            if loop_end is not None and loop_end != self.loop_end:
+                self.loop_end = loop_end
+                self.update_markers = True
+        if warp is not None and warp != self.warp:
+            self.warp = warp
+            self.update_markers = True
+        if beats is not None and beats != self.beats:
+            self.beats = beats
+            self.update_markers = True
+        if gain is not None and gain != self.gain:
+            self.gain = gain
+        if vzoom is not None and vzoom != self.vzoom:
+            self.vzoom = vzoom
+            self.refresh_waveform = True
+
+        refresh_info = False
+        try:
+            if self.refresh_waveform:
+                length = self.frames // self.zoom
+                if self.auto_offset == 1:
+                    # Centre on start crop marker
+                    self.offset = self.crop_start - length // 2
+                elif self.auto_offset == 2:
+                    # Centre on end crop marker
+                    self.offset = self.crop_end - length // 2
+                # Ensure whole waveform can be drawn
+                self.offset = min(self.offset, self.frames - length)
+                self.offset = max(self.offset, 0)
+                if self.draw_waveform(self.offset, length, self.vzoom):
+                    refresh_info = True
+                    self.update_markers = True
+                    self.refresh_waveform = False
+                else:
+                    self.refreshing = False
+                    return
+
+            if self.frames:
+                h = self.waveform_height
+                f = self.width / self.frames * self.zoom
+                if self.update_markers:
+                    # Crop markers
+                    x1 = f * (self.crop_start - self.offset)
+                    x2 = f * (self.crop_end - self.offset)
+                    self.widget_canvas.set_crop_markers(x1, x2)
+                    # Loop markers
+                    if self.loop_markers:
+                        x1 = f * (self.loop_start - self.offset)
+                        x2 = f * (self.loop_end - self.offset)
+                        self.widget_canvas.set_loop_markers(x1, x2)
+                    else:
+                        self.widget_canvas.reset_loop_markers()
+
+                    # Beat markers
+                    xdata = []
+                    coldata = []
+                    if self.beats > 0:  #  and self.warp
+                        # Get Beats Per Bar
+                        if self.clip_info:
+                            beats_per_bar = self.zyngui.state_manager.zynseq.get_sequence_param(self.clip_info[0], self.clip_info[1], zynseq.PHRASE_CHANNEL, "bpb")
+                            if beats_per_bar < 1:
+                                beats_per_bar = self.zyngui.state_manager.zynseq.bpb
+                        else:
+                            beats_per_bar = self.zyngui.state_manager.zynseq.bpb
+                            #beats_per_bar = 4
+                        dx = (x2 - x1) // self.beats
+                        if dx > 4:
+                            if dx < 16:
+                                n = self.beats // beats_per_bar
+                                plot_beats = False
+                            else:
+                                n = self.beats
+                                plot_beats = True
+                            for i in range(1, n):
+                                x = x1 + i * (x2 - x1) // n
+                                if plot_beats:
+                                    if i % beats_per_bar == 0:
+                                        col = self.bmarker_color1
+                                    else:
+                                        col = self.bmarker_color2
+                                else:
+                                    col = self.bmarker_color1
+                                xdata.append(x)
+                                coldata.append(col)
+                    elif self.eng_type in (self.ENG_GLOBAL_AP, self.ENG_CHAIN_AP):
+                        selected_cue = self.processor.controllers_dict['cue'].value
+                        for cue, cue_val in enumerate(self.processor.cues):
+                            cue_frames = self.samplerate * cue_val
+                            xdata.append(f * (cue_frames - self.offset))
+                            if cue == selected_cue:
+                                coldata.append(self.bmarker_color1)
+                            else:
+                                coldata.append(self.bmarker_color2)
+                    self.widget_canvas.set_beat_markers(xdata, coldata)
+                    if self.eng_type in (self.ENG_GLOBAL_AP, self.ENG_CHAIN_AP):
+                        self.widget_canvas.set_marker_numbers(xdata[1:], 1)
+                    else:
+                        self.widget_canvas.set_marker_numbers(xdata, 2)
+
+                # Playing cursor
+                if cursor_pos is not None:
+                    if self.last_cursor_pos != cursor_pos or self.update_markers:
+                        self.last_cursor_pos = cursor_pos
+                        frpos = self.crop_start + int(cursor_pos * (self.crop_end - self.crop_start)) - self.offset
+                        self.widget_canvas.set_cursor_pos(f * frpos)
+                else:
+                    self.widget_canvas.set_cursor_pos(-100)
+
+                refresh_info = True
+
+            if refresh_info:
+                n = (self.width // self.font_info.measure("x")) - 12
+                info_text = (self.fname[:n-3] + '...') if len(self.fname) > n else (self.fname + ' ')
+
+                if "info" in self.monitors:
+                    info = self.monitors["info"]
+                else:
+                    info = 0
+                if self.samplerate:
+                    dur = self.crop_end - self.crop_start
+                    if "speed" in self.monitors:
+                        speed = self.monitors["speed"]
+                        dur /= speed
+                    match info:
+                        case 1: # Position
+                            time = self.format_time(self.last_cursor_pos * dur * speed / self.samplerate)
+                        case 2: # Remaining
+                            time = self.format_time((1.0 - self.last_cursor_pos) * dur / self.samplerate)
+                        case 3: # Samplerate
+                            time = self.samplerate
+                        case 4: # CODEC
+                            time = self.monitors['codec']
+                        case _: # Duration
+                            time = self.format_time(dur / self.samplerate)
+                    info_text += f"[{time}]"
+
+                self.info_text_var.set(info_text)
+
+        except Exception as e:
+            # logging.error(e)
+            logging.exception(traceback.format_exc())
+
+        self.widget_canvas.update()
+        self.update_markers = False
+        # On first update => repeat redraw to ensure widget is not blank
+        if self.first_update:
+            self.refresh_waveform = True
+            self.first_update = False
+        self.refreshing = False
+
+    @staticmethod
+    def format_time(time):
+        return f"{int(time / 60):02d}:{int(time % 60):02d}.{int(modf(time)[0] * 1000):03}"
+
+    # -------------------------------------------------------------------------
+    # Clippy integration
+    # -------------------------------------------------------------------------
+
+    def get_clippy_info(self):
+        if self.processor.eng_code == "CL":
+            midi_chan = self.processor.midi_chan
+            scene = self.zyngui.state_manager.zynseq.scene
+            try:
+                symparts = self.zctrl.symbol.split(" ")
+                #symbol = symparts[0]  # should be "file"!
+                note = int(symparts[1])
+                phrase = note - 1
+            except Exception as e:
+                logging.error(f"Can't determine clippy sample index for '{self.zctrl.symbol}' => {e}")
+                return None
+            return (scene, phrase, midi_chan)
+        else:
+            return None
+
+    def get_clippy_values(self):
+        if self.clip_info:
+            try:
+                zctrls = self.processor.controllers_dict
+                note = self.clip_info[1] + 1
+                self.zoom = zctrls[f"zoom {note}"].value
+                self.crop_start = zctrls[f"crop_start {note}"].value
+                self.crop_end = zctrls[f"crop_end {note}"].value
+                self.warp = zctrls[f"warp {note}"].value
+                self.beats = zctrls[f"beats {note}"].value
+                self.gain = zctrls[f"gain {note}"].value
+                self.processor.engine.reset_monitors()
+                self.update_markers = True
+            except Exception as e:
+                logging.error(f"Can't get clip audio values for clip {self.clip_info} => {e}")
+
+    # -------------------------------------------------------------------------
+    # Audio recorder signal callback
+    # -------------------------------------------------------------------------
+
+    def audio_recorder_cb(self, state):
+        logging.debug(f"SIGNAL RECORD STATE => PROCESSOR {self.processor.id}")
+        if self.eng_type == self.ENG_CLIPPY:
+            #self.zyngui.state_manager.audio_recorder.status:
+            try:
+                self.processor.controllers_dict['record'].set_value(state, False)
+            except:
+                logging.error("Clippy processor doesn't have a record controller!")
+            # Manage stop recording => load recorded file in clippy
+            if not state:
+                fpath = self.zyngui.state_manager.audio_recorder.filename
+                if os.path.isfile(fpath):
+                    self.zctrl.set_value(fpath)
+
+        elif self.eng_type == self.ENG_CHAIN_AP:
+            # Manage stop recording => load last recorded file in the chain audio player
+            if not state:
+                fpath = self.zyngui.state_manager.audio_recorder.filename
+                if os.path.isfile(fpath):
+                    self.processor.engine.load_latest(self.processor)
+                    logging.debug(f"THIS SHOULD LOAD THE LATEST RECORDED FILE INTO THE SELECTED CHAIN AUDIO PLAYER => {self.processor.id}")
+
+    # -------------------------------------------------------------------------
+    # CUIA & LEDs methods
+    # -------------------------------------------------------------------------
+
+    def cuia_toggle_record(self, param=None):
+        # Handle transport for clippy
+        if self.clip_info:
+            self.zyngui.state_manager.audio_recorder.toggle_recording()
+            return True
+        return False
+
+    def cuia_stop(self, param=None):
+        # Handle transport for clippy
+        if self.clip_info:
+            self.zyngui.state_manager.zynseq.libseq.setPlayState(self.clip_info[0], self.clip_info[1], self.clip_info[2], 0)
+            return True
+        elif self.eng_type == self.ENG_CHAIN_AP:
+            self.processor.controllers_dict["transport"].set_value(0)
+            self.processor.controllers_dict["position"].set_value(0)
+            return True
+        return False
+
+    def cuia_play(self, param=None):
+        if self.eng_type == self.ENG_CHAIN_AP:
+            self.processor.controllers_dict["transport"].set_value(127)
+            return True
+        return False
+
+    def cuia_toggle_play(self, param=None):
+        # Handle transport for clippy
+        if self.clip_info:
+            self.zyngui.state_manager.zynseq.libseq.togglePlayState(self.clip_info[0], self.clip_info[1], self.clip_info[2])
+            return True
+        elif self.eng_type == self.ENG_CHAIN_AP:
+            self.processor.controllers_dict["transport"].toggle()
+            return True
+        return False
+
+    def update_wsleds(self, leds):
+        # Handle LEDs for clippy
+        if self.clip_info:
+            wsl = self.zyngui.wsleds
+            color_default = wsl.wscolor_active2
+            # REC Button
+            if self.zyngui.state_manager.audio_recorder.status:
+                wsl.set_led(leds[1], wsl.wscolor_red)
+            else:
+                wsl.set_led(leds[1], color_default)
+            # STOP button:
+            wsl.set_led(leds[2], color_default)
+            # PLAY button:
+            play_state = self.zyngui.state_manager.zynseq.libseq.getPlayState(self.clip_info[0], self.clip_info[1], self.clip_info[2])
+            if play_state in (2, 3, 4, 5):
+                wsl.blink(leds[3], wsl.wscolor_green)
+            elif play_state == 1:
+                wsl.set_led(leds[3], wsl.wscolor_green)
+            else:  # play_state == 0:`
+                wsl.set_led(leds[3], color_default)
+
+        # Handle LEDs for chanin audio player
+        elif self.eng_type == self.ENG_CHAIN_AP:
+            wsl = self.zyngui.wsleds
+            color_default = wsl.wscolor_active2
+            # REC Button
+            if self.zyngui.state_manager.audio_recorder.status:
+                wsl.set_led(leds[1], wsl.wscolor_red)
+            else:
+                wsl.set_led(leds[1], color_default)
+            # STOP button:
+            wsl.set_led(leds[2], color_default)
+            # PLAY button:
+            play_state = self.processor.controllers_dict["transport"].value
+            if play_state:
+                wsl.set_led(leds[3], wsl.wscolor_green)
+            else:
+                wsl.set_led(leds[3], color_default)
+
+
+
+
+# ------------------------------------------------------------------------------

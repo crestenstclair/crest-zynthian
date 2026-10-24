@@ -1,0 +1,249 @@
+# -*- coding: utf-8 -*-
+# ******************************************************************************
+# ZYNTHIAN PROJECT: Zynthian State Model Schema
+#
+# Copyright (C) 2022-2025 Fernando Moyano <jofemodo@zynthian.org>
+#                    Brian Walton <riban@zynthian.org>
+#
+# ******************************************************************************
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation; either version 2 of
+# the License, or any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# For a full copy of the GNU General Public License see the LICENSE.txt file.
+#
+# ******************************************************************************
+
+ZynthianState = {
+    "schema_version": 4,  # Version of state (snapshot) model
+    "last_snapshot_fpath": "/zynthian/zynthian-my-data/snapshots/000/My Snapshot 1.zss", # Full path and filename of last loaded snapshot
+    "midi_profile_state": {  # MIDI Profile TODO: Document midi profile
+        "MASTER_BANK_CHANGE_UP": "",
+        "SYS_ENABLED": "1", # Does not seem to be used
+        "MASTER_PROGRAM_CHANGE_DOWN": "",
+        "SINGLE_ACTIVE_CHANNEL": "0", # Does not seem to be used
+        "RTPMIDI_ENABLED": "0",
+        "TOUCHOSC_ENABLED": "0",
+        "PORTS": "DISABLED_IN=\\nENABLED_OUT=ttymidi:MIDI_out,QmidiNet:in_1\\nENABLED_FB=",
+        "MASTER_CHANNEL": "0",
+        "NETWORK_ENABLED": "0",
+        "FILTER_RULES": "",
+        "PROG_CHANGE_ZS3": "1",
+        "MASTER_PROGRAM_CHANGE_UP": "",
+        "BANK_CHANGE": "0",
+        "CC_AUTOMODE": "0",
+        "MASTER_BANK_CHANGE_CCNUM": "0",
+        "MASTER_BANK_CHANGE_DOWN": "",
+        "PRESET_PRELOAD_NOTEON": "1",
+        "AUBIONOTES_ENABLED": "0",
+        "FINE_TUNING": "440",
+        "MASTER_PROGRAM_CHANGE_TYPE": "Custom",
+        "PLAY_LOOP": "0", # Does not seem to be used
+        "FILTER_OUTPUT": "0",  # Does not seem to be used
+        "port_names": {  # Dictionary of MIDI port friendly names indexed by port uid
+            "USB-1.1.1 CH345 MIDI IN": "VZ-1 IN",  # Friendly name mapped by uid
+        } # ... More ports
+    },
+    "chains": {  # Dictionary of chains indexed by chain id (id=0 is main mixbus chain)
+        "1": {  # Chain 1
+            "title": "My first chain",  # Optional chain title
+            "midi_chan": 0,  # Chain MIDI channel (may be None)
+            "midi_thru": True, # True if chain passes MIDI
+            "audio_thru": False, # True if chain passes audio
+            "zmop_index": 1, # Index of zynmidirouter midi output (zmop) this chain uses
+            "slots": [  # List of slots in chain in serial slot order
+                {  # Dictionary of processors in first slot
+                    "1": "PT",  # Processor type indexed by processor id
+                }, # ... more processors in this slot
+            ], # ... More slots
+            "cc_route": [] # Optional list of MIDI CC to be routed directly to engine
+        }, # ... More chains
+    },
+    "zs3": {  # Dictionary of ZS3's indexed by chan/prog or ZS3-x
+        "zs3-0": {  # ZS3 state when snapshot saved
+            "title": "Last state",  # ZS3 title
+            "note": "Capo 2, watch the MD",  # Optional ZS3 note, shown by the performance view
+            "active_chain": "1", # Optional active chain id (overides base value)
+            "restore_midi_learn": False, # Optional restore midi CC binding (Default: False)
+            "processors": {  # Dictionary of processor settings
+                "1": {  # Processor id:1
+                    "restore": True, # Optional False to omit from processor parameters from restore (Default: True)
+                    "bank_info": ["HB Steinway D", 0, "Grand Steinway D (Hamburg)", "D4:A", "HB Steinway Model D"], # Bank id
+                    "preset_info": None,  # Preset id
+                    "controllers": {  # Optional dictionary of controllers (overrides preset default value)
+                        "volume": {  # Indexed by controller symbol
+                            "value": 96,  # Controller value
+                            "midi_cc_momentary_switch": 1, # Optional momentary toggle
+                            "midi_cc_debounce": 1 # Optional toggle debounce
+                        }, # ... More controllers
+                    }, # ... Other parameters
+                }, # ... Other controllers
+            }, # ... Other processors
+            "chains": {  # Dictionary of chain specific ZS3 config indexed by chain id
+                "1": {  # Chain 1
+                    "restore": True, # Optional False to omit chain from restore (default: True)
+                    "midi_learn": { # Dictionary of MIDI CC binding, indexed by 16-bit encoded [MIDI chan << 8 | CC]
+                        "267": [ # List of control bindings to this CC 
+                            [
+                                1, # Processor id
+                                "volume" # Controller symbol
+                            ], # ... Other controllers
+                        ], # ... Other bindings
+                    },
+                    "midi_chan": 0, # Override chain MIDI channel
+                    "midi_in": ["MIDI IN"], # List of chain jack MIDI input sources (may include aliases)
+                    "midi_out": ["MIDI OUT"],# List of chain jack MIDI output destinations (may include aliases)
+                    "audio_in": [0, 1], # List of index of physical input indicies or zynmixer:send
+                    "audio_out": [0, "system:playback"], # Lis of targets for chain routing: Chain id | jackport regex | [procid, input port name]
+                    "note_low": 0,  # Optional lowest MIDI note chain responds to
+                    "note_high": 127,  # Optional higheset MIDI note chain responds to
+                    "transpose_octave": 0,  # Optional octaves to transpose chain MIDI
+                    "transpose_semitone": 0,  # Optional semitones to transpose chain MIDI
+                },
+            }, # ... Other chains
+            "midi_capture": {  # Dictionary of midi input configuration mapped by port input uid
+                "ttymidi:MIDI_in": {
+                    "zmip_input_mode": True, # True if active chain mode enabled (stage mode), False for multitimbral
+                    "zmip_system": True, # True to enable MIDI system messages
+                    "zmip_system_rt": True, # True to enable MIDI realtime system messages
+                    "disable_ctrldev": False,  # True to disable loading of controller device driver
+                    "ctrldev_driver": "zynthian_ctrldev_launchkey_mini_mk3", # Name of controller device driver
+                    "routed_chains": [],  # List of chain zmops this input is routed to
+                    "audio_in": [0, 1], # Optional list of audio inputs, e.g. for aubio
+                    "midi_learn": {  # Dictionary of global/absolute MIDI CC binding, indexed by 24-bit encoded (zmop, MIDI chan, CC)
+                        "11": [  # List of control bindings to this CC
+                            [
+                                1, # Processor id
+                                "volume" # Controller symbol
+                            ]
+                        ], # ... Other controllers
+                    } # ... Other bindings
+                }, # ... Other devices
+                "zynmidi": { # Internal / GUI MIDI config
+                    "midi_learn": { # Same as physical MIDI input midi_learn
+                    }
+                }
+            },
+            "global": {  # Dictionary of global params settable by zs3 indexed by param name
+                "midi_transpose": 0,  # Semitones to globally transpose
+                "zctrl_x": [0, "volume"], # Optional mapping of x-axis controller [proc_id, symbol]
+                "zctrl_y": [0, "cutoff"], # Optional mapping of y-axis controller [proc_id, symbol]
+                "zynaptik": { # zynaptik configuration
+                    "cvin_volts_octave": 1.0, # CV input volts per octave
+                    "cvin_note0": 0, # CV input note 0 
+                    "cvout_volts_octave": 1.0, # CV output volts per octave
+                    "cvout_note0": 0 # CV output note 0
+                },
+                "send_clock": [ # List of MIDI output ports to send MIDI clock
+                    "ttymidi:MIDI_out",
+                    "USB:2.2/APC40 mkII OUT 1",
+                    # ... Other ports
+                ],
+                "clock_source": -1 # Index of ZMIP acting as MIDI clock source. -1 for internal.
+            }
+        },
+        "1/2": {},  # ZS3 for channel 1, program change 2
+        "zs3-1": {},  # Manually saved ZS3 without assigned program change
+    }, # ... Other ZS3
+    "last_zs3_id": "zs3-0", # Name of zs3 loaded when snapshot saved
+    "zynseq": {
+        "tempo": 120.0, # Default tempo in BPM
+        "bpb": 4, # Default beats per bar (time signature)
+        "scene": 0, # Selected scene when saved
+        "patns": { # Map of patterns, indexed by pattern id
+            "1": { # Pattern id
+                "steps": 16, # Steps in pattern
+                "beats": 4, # Beats in pattern
+                "scale": 0, # Index of scale to use for this pattern
+                "tonic": 0, # Root note for scale
+                "refNote": 51,
+                "ccnum": [0, 1, ...], # Interpolate CC numbers
+                "quantize": 0, # Amount to quantize
+                "swingDiv": 1, # Swing divisor
+                "swing": 0.0, # Amount of swing to apply to pattern
+                "humanTime": 0.0, # Variation in timing feel
+                "humanVel": 0.0, # Variation in velocity feel
+                "chance": 100, # Probability % of notes within pattern playing
+                "events": [ # List of events in the pattern
+                    [ # List of event parameters (use list for optimisation)
+                        0, # Step within pattern
+                        0.0, # Offset from start of step
+                        1.0, # Duration of event
+                        144, # MIDI command
+                        60, # MIDI value 1 at start of event
+                        100, # MIDI value 2 at start of event
+                        60, # MIDI value 1 at end of event
+                        0, # MIDI value 2 at end of event
+                        0, # Quantity of stutters
+                        1, # Duration of each stutter
+                        0, # Stutter ramp
+                        100, # Probability % of event triggering
+                        1, # Play frequency
+                        100, # Stutter play chance (%)
+                        1 # Stutter frequency
+                    ], # ... Other events
+                ]
+            }, # ... Other patterns
+        },
+        "scenes": [ # List of scenes, indexed by scene id
+            { # First scene
+                "name": "Scene 1", # Optional scene name
+                "phrases": [ # List of phrases, indexed by phrase number
+                    { # First phrase
+                        "name": "A", # Scene name
+                        "mode": 4, # Scene play mode
+                        "bpb": 4, # Beats per bar (time signature) override
+                        "tempo": 0, # Tempo override 0=no override
+                        "repeat": 1, # Quantity of repeats
+                        "followAction": 0, # Follow action
+                        "followParam": 0, # Follow action param
+                        "followRepeat": # Quantity of times a follow action is performed, e.g. loops
+                        "playFlags": 0, # Bitwise flags indicating which follow loops should be skipped
+                        "state": 0, # Play state (when snapshot saved)
+                        "sequences": [ # List of sequences in phrase
+                            {
+                                "mode": 4, # Sequence play mode
+                                "group": 0, # Mutex group (0..15, Chain MIDI channel else multi-channel)
+                                "name": "1", # Sequence name
+                                "repeat": 1, # Quantity of repeats
+                                "followAction": 0, # Follow action
+                                "followParam": 0, # Follow action param
+                                "state": 0, # Play state (when snapshot saved)
+                                "tracks": [ # List of tracks in sequence
+                                    {
+                                        "chan": 0, # MIDI channel
+                                        "output": 0, # Jack output
+                                        "map": 0, # Key map
+                                        "patns": { # Indexed by relative start time within sequence
+                                            "0": 3, # Pattern id
+                                            # ... Other patterns
+                                        }
+                                    }, # ... Other tracks
+                                ],
+                                "timebase": [ # List of timebase events
+                                    { # Event
+                                        "bar": 1, # Measure or bar of event
+                                        "tick": 0, # Tick within measure
+                                        "type": 0, # Event type, e.g. tempo
+                                        "value": 80 # Event value
+                                    },
+                                    # ... Other timebase events
+                                ]
+                            }, # ... Other sequences
+                        ],
+                    }, # .. Other phrases
+                ],
+            }, # Other scenes
+        ]
+    },
+    "gui": { # Optional GUI configuration
+        "pinned_chains": 1 # Quantity of chains pinned to right edge (including main mixbus)
+    }
+}

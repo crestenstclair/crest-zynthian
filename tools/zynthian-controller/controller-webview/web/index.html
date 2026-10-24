@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src qrc:; style-src qrc:; img-src qrc: data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<title>Zynthian Controller</title><link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="composer.css"><script src="composer.js" defer></script>
+<script src="qrc:///qtwebchannel/qwebchannel.js" defer></script><script src="app.js" defer></script>
+</head><body>
+<header><div><span class="brand">ZYNTHIAN</span><span class="tag">CONTROLLER</span></div><span id="connection">Connecting</span></header>
+<div class="layout"><nav aria-label="Zynthian navigation">
+<button data-action="home">Main Menu<span>START / HOME</span></button>
+<button data-action="mixer">Mixer<span>VIEW / F2</span></button>
+<button data-action="launcher">Sequencer<span>F6</span></button>
+<button data-action="snapshots">Snapshots<span>RB / F3</span></button>
+<button data-action="back">Back<span>B / ESC</span></button>
+<button data-action="panic" class="panic">All Sounds Off<span>F12</span></button>
+</nav><main><div class="eyebrow" id="screen-name">ZYNTHIAN APPLICATION</div>
+<h1 id="title">Connecting to Zynthian</h1><p id="message"></p><p id="error" role="alert"></p>
+<section id="sequence" hidden aria-label="Sequencer editor"></section>
+<button id="context-dismiss" hidden aria-label="Close context menu" data-action="focus"></button>
+<section id="menu-panel" aria-label="Screen actions">
+<div id="context-heading"><h2 id="context-title">Actions</h2><button data-action="focus" aria-label="Close context menu">Close · B / Esc</button></div>
+<p id="context-description"></p>
+<div id="items" role="list" aria-label="Menu"></div>
+<div id="parameter" hidden><button data-action="left" aria-label="Decrease selected parameter">−</button><span id="parameter-label"></span><button data-action="right" aria-label="Increase selected parameter">+</button></div>
+<p id="context-help">D-pad / arrows choose · A / Enter activates · B / Esc closes</p>
+</section>
+</main></div>
+<footer><span id="footer-hints"><b>↑ ↓</b> Navigate <b>A / Enter</b> Select <b>Y / F4</b> Options <b>← →</b> Adjust <b>LB / Shift</b> Fine</span><span id="input-status"></span></footer>
+</body></html>

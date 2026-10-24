@@ -1,0 +1,8 @@
+*~
+.*~
+__pycache__
+venv
+zynlibs/*/build
+.vscode/launch.json
+.idea
+.old

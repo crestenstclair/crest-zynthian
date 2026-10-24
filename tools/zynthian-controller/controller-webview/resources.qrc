@@ -1,0 +1,1 @@
+<RCC><qresource prefix="/ui"><file alias="index.html">web/index.html</file><file alias="app.js">web/app.js</file><file alias="style.css">web/style.css</file><file alias="composer.js">web/composer.js</file><file alias="composer.css">web/composer.css</file></qresource></RCC>
