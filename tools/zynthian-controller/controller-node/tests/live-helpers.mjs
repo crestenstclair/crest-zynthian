@@ -30,11 +30,13 @@ export async function capture(page,name) {
 export async function choose(page,label) {
   await page.locator('#items .item').filter({hasText:label}).first().click();await ready(page);
 }
-export async function home(page) {await page.keyboard.press('Home');await ready(page);}
+export async function home(page) {await navigation(page,'home');}
 export async function navigation(page,label) {
-  await home(page);
-  if ((await page.locator('#navigation-more').getAttribute('open')) === null) await page.locator('#navigation-more summary').click();
-  await page.locator('#navigation-items button').filter({hasText:label}).first().click();await ready(page);
+  const routes={'Chain Control':'chainControl','Chain Manager':'chainManager','MIDI Input':'midiInput',
+    'MIDI Output':'midiOutput','Audio Player':'audioPlayer','MIDI Player':'midiPlayer',
+    Tempo:'tempo',ZS3:'zs3',Administration:'admin',Snapshots:'snapshots'};
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+  await page.locator(`#navigation-items [data-route="${routes[label] || label}"]`).click();await ready(page);
 }
 export async function back(page) {await page.keyboard.press('Escape');await ready(page);}
 export async function options(page,label) {
@@ -60,7 +62,6 @@ export async function audibleSequence(page,name) {
   const s=await state(page), column=s.sequence.columns.find(c=>c.label.includes('FluidSynth'));
   expect(column).toBeTruthy();
   await page.locator('.clip[aria-label*="FluidSynth"]').first().click();await ready(page);
-  await page.keyboard.press('F4');await ready(page);
   expect((await state(page)).screen).toBe('pattern_editor');
   await page.keyboard.press('Space');await ready(page);await page.waitForTimeout(4500);
   await page.keyboard.press('Space');await ready(page);
@@ -71,7 +72,7 @@ export async function audibleSequence(page,name) {
 }
 
 export async function loadSnapshot(page,label='001-New Snapshot') {
-  await home(page);await page.locator('nav [data-action="snapshots"]').click();await ready(page);
+  await navigation(page,'snapshots');
   await choose(page,label);await choose(page,'Load');await ready(page);
 }
 export async function nameText(page,text) {

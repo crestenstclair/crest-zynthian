@@ -35,7 +35,7 @@ class ControllerWorkflowTests(TestCase):
     def test_processor_presets_delegate_to_zynthian(self):
         processor = SimpleNamespace(id=4, type='MIDI Synth', get_name=lambda:'FluidSynth')
         parent = SimpleNamespace(subscreen_name='control', subscreen=SimpleNamespace(title='Controls',list_data=[]),
-                                 chain=SimpleNamespace(get_processors=lambda:[processor]))
+                                 chain=SimpleNamespace(chain_id=7,midi_chan=2,get_name=lambda:"Lead",get_processors=lambda:[processor]))
         gui = SimpleNamespace(current_screen='chain_control',screens={'chain_control':parent},cuia_bank_preset=Mock())
         adapter = ScreenAdapter(gui)
         state = adapter.snapshot()
@@ -84,7 +84,7 @@ class ControllerWorkflowTests(TestCase):
     def test_processor_menu_does_not_depend_on_hidden_chain_canvas(self):
         processor = SimpleNamespace(id=4,type='MIDI Synth',get_name=lambda:'FluidSynth')
         parent = SimpleNamespace(subscreen_name='control',subscreen=SimpleNamespace(title='Controls',list_data=[]),
-            chain=SimpleNamespace(get_processors=lambda:[processor]))
+            chain=SimpleNamespace(chain_id=7,midi_chan=2,get_name=lambda:"Lead",get_processors=lambda:[processor]))
         gui = SimpleNamespace(current_screen='chain_control',screens={'chain_control':parent},
             set_current_processor=Mock(),show_screen=Mock())
         adapter = ScreenAdapter(gui)
@@ -106,6 +106,39 @@ class ControllerWorkflowTests(TestCase):
         self.assertNotIn('Symbols',labels)
         adapter.dispatch({'method':'activate','target':'special:10','revision':state['revision']})
         screen.execute_key_press.assert_called_once_with(10,False)
+
+    def test_direct_name_entry_validates_before_invoking_native_save(self):
+        screen = SimpleNamespace(title='Keyboard',columns=6,mode=0,text='123',keys=list('123456789'),
+            btn_space=10,btn_delete=11,btn_cancel=9,btn_enter=12,btn_shift=41,btn_alt=42,
+            function=Mock(),execute_key_press=Mock())
+        gui = SimpleNamespace(current_screen='keyboard',screens={'keyboard':screen})
+        adapter = ScreenAdapter(gui)
+        for value in (None, 123, 'bad\nname', 'x'*257, 'abc'):
+            with self.assertRaises(ValueError):
+                adapter.dispatch(dict(method='text',text=value,revision=adapter.snapshot()['revision']))
+        screen.execute_key_press.assert_not_called()
+        self.assertEqual(screen.text,'123')
+        adapter.dispatch(dict(method='text',text='42',revision=adapter.snapshot()['revision']))
+        screen.execute_key_press.assert_called_once_with(12)
+        self.assertEqual(screen.text,'42')
+        gui.current_screen='other';gui.screens['other']=SimpleNamespace(title='Other')
+        with self.assertRaises(ValueError):
+            adapter.dispatch(dict(method='text',text='wrong screen',revision=adapter.snapshot()['revision']))
+
+    def test_detail_return_applies_inline_value_but_keeps_confirmation_explicit(self):
+        screen=SimpleNamespace(param_editor_zctrl=object(),switch_select=Mock())
+        gui=SimpleNamespace(current_screen='option',screens={'option':screen},show_screen=Mock(),cuia_back=Mock())
+        adapter=ScreenAdapter(gui);adapter.detail_workspace='pattern_editor'
+        screen.switch_select.side_effect=lambda _:setattr(gui,'current_screen','confirm')
+        adapter.return_workspace()
+        gui.show_screen.assert_not_called()
+        self.assertEqual(adapter.detail_workspace,'pattern_editor')
+        gui.screens['confirm']=SimpleNamespace()
+        adapter.return_workspace();gui.cuia_back.assert_called_once()
+        gui.current_screen='option';screen.param_editor_zctrl=None
+        adapter.return_workspace()
+        gui.show_screen.assert_called_once_with('pattern_editor')
+        self.assertIsNone(adapter.detail_workspace)
 
     def test_midi_rename_captures_file_before_keyboard_rebuilds_list(self):
         callback = upstream_method('zynthian_gui_midi_recorder.py','zynthian_gui_midi_recorder','smf_options_cb')

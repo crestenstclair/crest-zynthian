@@ -56,12 +56,17 @@ not expose the backend on the network.
 ## Native and browser input
 
 SDL opens connected controllers and watches hotplug events in the C++ process.
-Qt WebChannel delivers semantic actions and connection status to the HTML model.
+Qt WebChannel delivers normalized button/axis states and connection status to
+the HTML gesture interpreter shared with browser controllers.
 The status line identifies the native source with `SDL`. Native input is inactive
 when the app loses focus. Controllers must return to neutral after connection,
 focus changes or page reload before actions resume. Directional controls repeat;
-activation does not. LB modifies fine adjustment and X/Y actions, including when
-SDL batches simultaneous button presses.
+activation does not. Cross and Circle short taps commit on release; held chords
+and holds of at least 350 ms consume their tap. The HTML frontend displays the
+held modifier immediately. Circle/L1 + directions navigate; Cross + directions
+adjust. The host must expose normalized `gamepadStateChanged` input; an older
+host reports that it needs rebuilding rather than falling back to old actions. See the
+Sony-position mappings in the controller guide.
 
 The native host leaves keyboard and text-field handling with the HTML frontend.
 It disables browser gamepad polling to avoid duplicate actions. A browser without
@@ -71,7 +76,7 @@ permission or browser extension is needed by the native SDL path.
 The current mappings remain provisional. See the [controller guide](../README.md#controls)
 and [offline manual](../../../docs/zynthian-controller-manual.html). The shared
 [screen map](../controller-node/SCREEN-COVERAGE.md) describes current HTML coverage.
-Tracker, Euclidean and randomizer remain previews.
+The live tracker edits one native track; Euclidean and randomizer remain previews.
 
 ## Transport and security
 

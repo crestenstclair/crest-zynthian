@@ -17,6 +17,7 @@ import math
 from concurrent.futures import Future
 from threading import Thread
 from .sequencer import SequencerView
+from .pattern_properties import PatternProperties
 from .screen_views import add_controls, special_screen, navigation_actions, contextual_actions, widget_readouts
 
 MAX_FRAME = 1024 * 1024
@@ -31,6 +32,8 @@ class ScreenAdapter:
         self.sequencer = SequencerView(self)
         self.actions = {}
         self.selections = {}
+        self.detail_workspace = None
+        self.pattern_properties = PatternProperties(self)
 
     def _add(self, items, key, label, activate=None, control=None, identity=None, options=None):
         row = {"id": key, "label": str(label).replace("\n", " "),
@@ -44,6 +47,8 @@ class ScreenAdapter:
                        display=str(control.get_value2label() if control.labels else control.value),
                        path=bool(control.is_path), toggle=bool(getattr(control, "is_toggle", False)),
                        integer=bool(getattr(control, "is_integer", True)))
+            if control.labels:
+                row['choices'] = [{'value': value, 'label': label} for value, label in zip(control.ticks, control.labels)]
         items.append(row)
 
     def snapshot(self):
@@ -54,6 +59,7 @@ class ScreenAdapter:
         screen = self.gui.screens.get(name)
         state = {"screen": name or "starting", "title": "Starting Zynthian",
                  "items": [], "columns": 1, "kind": "list", "message": ""}
+        state["detailWorkspace"] = self.detail_workspace
         manager = getattr(self.gui, "state_manager", None)
         state["transport"] = {
             "audioRecording": bool(getattr(getattr(manager, "audio_recorder", None), "status", False)),
@@ -71,6 +77,7 @@ class ScreenAdapter:
         items = state["items"]
         self.sequencer.actions = {}
         self.sequencer.cells = {}
+        self.sequencer.tracker_cells = {}
         if name == "chain_control" and screen is not None:
             parent = screen
             self.identities.append(("subscreen", parent.subscreen_name, id(parent.subscreen)))
@@ -79,7 +86,16 @@ class ScreenAdapter:
                 self._add(items, "sub:" + key, label,
                           lambda t, key=key: parent.select_subscreen(key))
             if parent.chain:
+                chain = parent.chain
+                state["instrument"] = {"id": chain.chain_id, "name": chain.get_name(),
+                                       "channel": chain.midi_chan, "section": parent.subscreen_name,
+                                       "processors": []}
                 for processor in parent.chain.get_processors():
+                    state["instrument"]["processors"].append({
+                        "id": processor.id, "name": processor.get_name(),
+                        "type": str(getattr(processor, "type", "")),
+                        "bank": str(getattr(processor, "bank_name", "") or ""),
+                        "preset": str(getattr(processor, "preset_name", "") or "")})
                     def processor_options(p=processor):
                         # The hidden side canvas may not have rebuilt after an
                         # insert. Select the actual processor, then use its menu.
@@ -103,6 +119,9 @@ class ScreenAdapter:
                 if name in ("root", "mixer"):
                     state["screen"] = "launcher"
                 self.sequencer.snapshot(screen, state)
+                if self.detail_workspace == name and name in ('pattern_editor', 'pated_cc'):
+                    self.pattern_properties.populate(screen, state)
+                    items = state['items']
             elif name == "loading":
                 state.update(kind="status", title=screen.canvas.itemcget(screen.title_text, "text"),
                              message=screen.canvas.itemcget(screen.details_text, "text"))
@@ -114,6 +133,7 @@ class ScreenAdapter:
                           identity=(id(screen.callback), repr(screen.callback_params)))
             elif name == "keyboard":
                 state.update(kind="keyboard", columns=getattr(screen, "columns", 10), message=screen.text)
+                state["textEntry"] = {"value": screen.text, "numeric": getattr(screen, "mode", 1) == 0}
                 for i, key in enumerate(screen.keys):
                     self._add(items, f"key:{i}", key,
                               lambda t, i=i: screen.execute_key_press(i))
@@ -131,6 +151,22 @@ class ScreenAdapter:
                 self._add(items, "keyboard:clear", "Clear text",
                           lambda t: screen.execute_key_press(screen.btn_delete, True))
             elif name == "chain_manager":
+                state["instruments"] = []
+                for chain_id, chain in self.gui.chain_manager.chains.items():
+                    if chain_id == 0:
+                        continue
+                    target = f"instrument:{chain_id}"
+                    def open_instrument(t, chain_id=chain_id):
+                        self.gui.chain_manager.set_active_chain_by_id(chain_id)
+                        self.gui.chain_control(chain_id)
+                    self._add(items, target, chain.get_name(), open_instrument, identity=id(chain))
+                    state["instruments"].append({"id": chain_id, "target": target,
+                        "name": chain.get_name(), "channel": chain.midi_chan,
+                        "processors": [{"name": p.get_name(), "type": str(getattr(p, "type", "")),
+                                        "preset": str(getattr(p, "preset_name", "") or "")}
+                                       for p in chain.get_processors()]})
+                self._add(items, "instrument:add", "+ Add instrument", lambda t: self.add_instrument())
+                state["routingTargets"] = []
                 for ci, chain in enumerate(screen.nodes):
                     for ri, row in enumerate(chain):
                         for ni, node in enumerate(row):
@@ -142,11 +178,16 @@ class ScreenAdapter:
                                       f'{node["chain_id"]} · {node["title"]}', activate,
                                       identity=(node["chain_id"], str(node.get("proc"))),
                                       options=lambda activate=activate: activate("B"))
+                            state["routingTargets"].append(f"node:{ci}:{ri}:{ni}")
             elif name in ("root", "mixer", "launcher"):
                 if getattr(screen, "launcher_mode", False):
                     self.sequencer.snapshot(screen, state)
                 else:
+                    state["mixer"] = []
                     for chain_id, chain in self.gui.chain_manager.chains.items():
+                        strip = {"id": chain_id, "name": chain.get_name(),
+                                 "channel": chain.midi_chan, "controls": []}
+                        state["mixer"].append(strip)
                         def open_chain(t, chain=chain):
                             self.gui.chain_manager.set_active_chain_by_id(chain.chain_id)
                             self.gui.chain_control(chain.chain_id)
@@ -162,6 +203,7 @@ class ScreenAdapter:
                                     self._add(items, f"mix:{chain_id}:{symbol}",
                                               f'{chain.get_name()} · {symbol}', control=ctrl,
                                               identity=id(ctrl))
+                                    strip["controls"].append({"symbol": symbol, "target": f"mix:{chain_id}:{symbol}"})
             elif isinstance(getattr(screen, "config", None), list):
                 state.update(kind="grid", columns=min(4, max(1, screen.columns)))
                 for i, node in enumerate(screen.config):
@@ -178,6 +220,7 @@ class ScreenAdapter:
                               identity=identity)
             elif hasattr(screen, "list_data"):
                 if name == "engine":
+                    state['engineCategoryName'] = screen.engine_cats[screen.cat_index] if screen.engine_cats else ''
                     # The native engine selector has a second list for categories.
                     # Without it the controller can only reach the initial category.
                     for i, category in enumerate(getattr(screen, "engine_cats", []) or []):
@@ -212,6 +255,10 @@ class ScreenAdapter:
                           activate=lambda t: screen.switch_select("S"), control=editor, identity=id(editor))
                 state["inlineEditor"] = True
         # Values may change externally without invalidating held parameter editing.
+        if name == "chain_control":
+            # Put the sound and its preset first; keep native routing and parameter targets.
+            items.sort(key=lambda item: 0 if item["id"].startswith(("processor:", "presets:"))
+                       else 1 if item["id"].startswith("sub:") else 2)
         identity = [name, state["title"], state["message"] if name == "confirm" else "",
                     [(x["id"], x["label"], x["enabled"]) for x in items], self.identities,
                     list(self.actions)]
@@ -219,6 +266,50 @@ class ScreenAdapter:
         state["revision"] = self.revision
         state["protocol"] = 1
         return state
+
+    def add_instrument(self):
+        self.gui.cuia_add_chain()
+        screen = self.gui.screens["add_chain"]
+        index = next(i for i, entry in enumerate(screen.config) if entry.get("title") == "Instrument")
+        screen.select(index)
+        screen.switch_select("S")
+        self.gui.prune_screen_history("add_chain", soft=False)
+
+    def show_details(self):
+        name = self.gui.current_screen
+        if self.detail_workspace:
+            return self.return_workspace()
+        screen = self.gui.screens[name]
+        if name in ('pattern_editor', 'pated_cc'):
+            self.detail_workspace = name
+            return
+        callback = self.sequencer.actions.get("menu") if name in ("launcher", "pattern_editor", "pated_cc") else self.actions.get("screenMenu")
+        if name == "chain_control":
+            callback = lambda: screen.select_subscreen("chain_options")
+        if not callback:
+            raise ValueError("This page has no detail view")
+        self.detail_workspace = name
+        callback()
+
+    def return_workspace(self):
+        if not self.detail_workspace:
+            return
+        name = self.detail_workspace
+        if self.gui.current_screen == name and name in ('pattern_editor', 'pated_cc'):
+            self.detail_workspace = None
+            return
+        screen = self.gui.screens[self.gui.current_screen]
+        if self.gui.current_screen in ("confirm", "keyboard"):
+            self.gui.cuia_back()
+            return
+        if getattr(screen, "param_editor_zctrl", None) is not None:
+            screen.switch_select("S")
+            if self.gui.current_screen == "confirm":
+                return
+        if name == "chain_control":
+            self.gui.screens[name].select_subscreen("control")
+        self.gui.show_screen(name)
+        self.detail_workspace = None
 
     def dispatch(self, request):
         if not isinstance(request, dict):
@@ -238,7 +329,9 @@ class ScreenAdapter:
                        "mixer": self.gui.cuia_screen_mixer,
                        "snapshots": self.gui.cuia_screen_snapshot,
                        "launcher": lambda: self.gui.show_screen("launcher"),
-                       "panic": self.gui.cuia_all_sounds_off}
+                       "panic": self.gui.cuia_all_sounds_off,
+                       "addInstrument": self.add_instrument,
+                       "details": self.show_details, "workspace": self.return_workspace}
             actions.update(self.actions)
             if request.get("action") not in actions:
                 raise ValueError("Unknown action")
@@ -246,7 +339,18 @@ class ScreenAdapter:
             # on native selection, without activating or loading the focused row.
             if request["action"] == "screenMenu" and request.get("target") in self.selections:
                 self.selections[request["target"]]()
+            if request["action"] not in ("details", "workspace", "back", "screenMenu"):
+                self.detail_workspace = None
             actions[request["action"]]()
+        elif method == "text":
+            text = request.get("text")
+            if current["screen"] != "keyboard" or not isinstance(text, str) or len(text) > 256 or any(ord(c) < 32 for c in text):
+                raise ValueError("Invalid name entry")
+            screen = self.gui.screens["keyboard"]
+            if getattr(screen, "mode", 1) == 0 and text and not text.isdecimal():
+                raise ValueError("This field accepts digits only")
+            screen.text = text
+            screen.execute_key_press(screen.btn_enter)
         elif method == "sequence":
             self.sequencer.dispatch(request)
         elif method in ("activate", "adjust", "set"):

@@ -1,33 +1,34 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Zynthian Controller</title><link rel="stylesheet" href="style.css">
+<title>Crest Tracker · Zynthian</title><link rel="stylesheet" href="style.css">
 <script src="app.js" defer></script><script type="module" src="boot.mjs"></script>
 </head><body>
-<header><div><span class="brand">ZYNTHIAN</span><span class="tag">CONTROLLER</span></div><div class="connection-tools"><span id="transport-status" role="status"></span><button id="audio-enable">Enable audio</button><span id="audio-status" role="status"></span><span id="connection">Connecting</span></div></header>
-<div class="layout"><nav aria-label="Zynthian navigation">
-<button data-action="home">Main Menu<span>START / HOME</span></button>
-<button data-action="mixer">Mixer<span>VIEW / F2</span></button>
-<button data-action="launcher">Sequencer<span>F6</span></button>
-<button data-action="snapshots">Snapshots<span>RB / F3</span></button>
-<details id="navigation-more"><summary>More screens</summary><div id="navigation-items"></div></details>
-<button data-action="back">Back<span>B / ESC</span></button>
-<button data-action="panic" class="panic">All Sounds Off<span>F12</span></button>
-</nav><main><div class="eyebrow" id="screen-name">ZYNTHIAN APPLICATION</div>
-<h1 id="title">Connecting to Zynthian</h1><p id="message"></p><p id="error" role="alert"></p>
+<header class="context-line">
+<button class="brand" data-action="home" aria-label="Top-level menu">≡ &nbsp; CREST TRACKER</button><button data-action="navigation" aria-label="Open navigation">△ Jump</button>
+<nav class="contexts" aria-label="Main contexts"><button data-action="launcher">SONG</button><button data-action="chainManager">INSTRUMENTS</button><button data-action="mixer">MIXER</button></nav>
+<div class="connection-tools"><span id="transport-status" role="status"></span><button id="audio-enable">Enable audio</button><span id="audio-status" role="status"></span><span id="connection">Connecting</span></div>
+</header>
+<div class="identity"><span class="eyebrow" id="screen-name">ZYNTHIAN</span><h1 id="title">Connecting to Zynthian</h1><span id="native-context"></span></div>
+<div class="layout"><main>
+<p id="message"></p><p id="error" role="alert"></p>
+<section id="home-view" hidden aria-label="Top-level menu"></section>
+<form id="name-entry" hidden><label for="name-text">Name</label><input id="name-text" maxlength="256" autocomplete="off"><button type="submit">Save name</button><button type="button" data-action="back">Cancel · ○</button></form>
 <div id="screen-actions" aria-label="Screen actions"></div>
 <section id="screen-content" hidden aria-label="Screen information"></section>
 <section id="sequence" hidden aria-label="Sequencer editor"></section>
 <button id="context-dismiss" hidden aria-label="Close context menu" data-action="focus"></button>
 <section id="menu-panel" aria-label="Screen actions">
-<div id="context-heading"><h2 id="context-title">Actions</h2><button data-action="focus" aria-label="Close context menu">Close · B / Esc</button></div>
+<div id="context-heading"><h2 id="context-title">Actions</h2><button data-action="focus" aria-label="Close context menu">Close · ○ / Esc</button></div>
 <p id="context-description"></p>
 <div id="items" role="list" aria-label="Menu"></div>
 <p id="selection-description"></p>
 <div id="selection-actions"><button data-action="bold">Options for selected item</button></div>
-<div id="parameter" hidden><button data-action="left" aria-label="Decrease selected parameter">−</button><span id="parameter-label"></span><button data-action="right" aria-label="Increase selected parameter">+</button></div>
-<p id="context-help">D-pad / arrows choose · A / Enter activates · B / Esc closes</p>
+<div id="parameter" hidden><button data-action="adjustSmallLess" aria-label="Decrease selected parameter">−</button><span id="parameter-label"></span><button data-action="adjustSmallMore" aria-label="Increase selected parameter">+</button></div>
+<p id="context-help">D-pad / arrows choose · Select activates · Back closes</p>
 </section>
 </main></div>
-<footer><span id="footer-hints"><b>↑ ↓</b> Navigate <b>A / Enter</b> Select <b>Y / F4</b> Options <b>← →</b> Adjust <b>LB / Shift</b> Fine</span><span id="input-status"></span></footer>
+<footer><span id="footer-hints">D-pad / arrows navigate · Enter select · F5 menu</span><span id="input-held" aria-live="polite"></span><button data-action="back">BACK / ESC</button><button data-action="panic">ALL SOUNDS OFF / F12</button><span id="input-status"></span></footer>
+<dialog id="navigation-panel" aria-labelledby="navigation-title"><div class="dialog-heading"><h2 id="navigation-title">QUICK JUMP</h2><button data-action="navigation" aria-label="Close navigation">Close · ○</button></div><p>Jump to a workspace. ○ / Escape returns without changing pages.</p><nav id="navigation-items" aria-label="Zynthian navigation"></nav></dialog>
 </body></html>

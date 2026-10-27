@@ -82,6 +82,38 @@ private slots:
         QVERIFY(actions.first().at(1).toBool());
     }
 
+    void nativeGamepadFramesPreserveChordsAndRequireNeutralOnRefocus() {
+        Input input;
+        SDL_VirtualJoystickDesc descriptor{};
+        descriptor.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
+        descriptor.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+        descriptor.naxes = SDL_CONTROLLER_AXIS_MAX;
+        descriptor.nbuttons = SDL_CONTROLLER_BUTTON_MAX;
+        descriptor.name = "Crest gesture gamepad";
+        const int index = SDL_JoystickAttachVirtualEx(&descriptor);
+        QVERIFY2(index >= 0, SDL_GetError());
+        auto* joystick = SDL_JoystickOpen(index);
+        QVERIFY(joystick);
+        const auto cleanup = qScopeGuard([&] { SDL_JoystickClose(joystick); SDL_JoystickDetachVirtual(index); });
+        QTRY_VERIFY(input.gamepadState().value("connected").toBool());
+        const auto pressed = [&](int button) { return input.gamepadState().value("buttons").toList().value(button).toBool(); };
+        QCOMPARE(SDL_JoystickSetVirtualButton(joystick, SDL_CONTROLLER_BUTTON_A, true), 0);
+        QCOMPARE(SDL_JoystickSetVirtualButton(joystick, SDL_CONTROLLER_BUTTON_DPAD_RIGHT, true), 0);
+        QTRY_VERIFY(pressed(0) && pressed(15)); // Cross + Right arrives as one held chord.
+        QCOMPARE(SDL_JoystickSetVirtualButton(joystick, SDL_CONTROLLER_BUTTON_DPAD_RIGHT, false), 0);
+        QTRY_VERIFY(pressed(0) && !pressed(15)); // Keep modifier through direction release.
+        input.setActive(false);
+        QVERIFY(!input.gamepadState().value("connected").toBool());
+        input.setActive(true);
+        QTest::qWait(40);
+        QVERIFY(!input.gamepadState().value("connected").toBool());
+        QCOMPARE(SDL_JoystickSetVirtualButton(joystick, SDL_CONTROLLER_BUTTON_A, false), 0);
+        QTRY_VERIFY(input.gamepadState().value("connected").toBool());
+        QCOMPARE(SDL_JoystickSetVirtualButton(joystick, SDL_CONTROLLER_BUTTON_B, true), 0);
+        QCOMPARE(SDL_JoystickSetVirtualButton(joystick, SDL_CONTROLLER_BUTTON_DPAD_UP, true), 0);
+        QTRY_VERIFY(pressed(1) && pressed(12)); // Circle + Up uses the browser positions too.
+    }
+
     void sequencerFocusSurvivesUpdatesAndResetsOnScreenChange() {
         Model model;
         QJsonObject state{{"protocol", 1}, {"screen", "pattern_editor"}, {"kind", "sequencer"}, {"revision", "a"},

@@ -16,7 +16,7 @@ async function harness(page, native, late = false) {
       }});
       window.createNative=()=>{
         const signal=()=>{let callback;return {connect:fn=>callback=fn,emit:(...args)=>callback?.(...args)}};
-        window.zynthianNativeInput={status:'SDL · Test controller',actionTriggered:signal(),statusChanged:signal()};
+        window.zynthianNativeInput={status:'SDL · Test controller',gamepadState:{connected:true,buttons:[],axes:[]},gamepadStateChanged:signal(),statusChanged:signal()};
         window.dispatchEvent(new Event('zynthian-native-ready'));
       };
       window.zynthianNativeHost=${native};
@@ -38,8 +38,11 @@ for (const late of [false,true]) test(`native input: WebChannel ${late?'late':'e
     await page.evaluate(()=>window.createNative());
   }
   await expect(page.locator('#status')).toHaveText('SDL · Test controller');
-  await page.evaluate(()=>window.zynthianNativeInput.actionTriggered.emit('record',true));
-  expect(await page.evaluate(()=>window.actions)).toEqual([{action:'record',fine:true}]);
+  await page.evaluate(()=>window.zynthianNativeInput.gamepadStateChanged.emit({connected:true,buttons:[true],axes:[]}));
+  await page.waitForTimeout(50);expect(await page.evaluate(()=>window.actions)).toEqual([]);
+  await page.evaluate(()=>window.zynthianNativeInput.gamepadStateChanged.emit({connected:true,buttons:[true],axes:[1,0,0,0]}));
+  await expect.poll(()=>page.evaluate(()=>window.actions)).toEqual([{action:'adjustSmallMore',fine:false}]);
+  await page.evaluate(()=>window.zynthianNativeInput.gamepadStateChanged.emit({connected:false}));
   expect(await page.evaluate(()=>window.gamepadPolls)).toBe(0);
   await page.evaluate(()=>{window.zynthianNativeInput.status='SDL · no controller connected';window.zynthianNativeInput.statusChanged.emit();});
   await expect(page.locator('#status')).toHaveText('SDL · no controller connected');
@@ -56,8 +59,21 @@ test('browser input: standard gamepad works without native host',async({page})=>
   await expect.poll(()=>page.evaluate(()=>window.actions[0]?.action)).toBe('right');
   await page.evaluate(()=>window.pad.buttons[15].pressed=false);
   await page.waitForFunction(()=>window.gamepadPolls>5);
-  await page.evaluate(()=>{window.pad.buttons[4].pressed=true;window.pad.buttons[2].pressed=true;});
-  await expect.poll(()=>page.evaluate(()=>window.actions.at(-1))).toEqual({action:'record',fine:true});
+  await page.evaluate(()=>{window.pad.buttons[1].pressed=true;window.pad.buttons[12].pressed=true;});
+  await expect.poll(()=>page.evaluate(()=>window.actions.at(-1))).toEqual({action:'details',fine:false});
+});
+
+test('keyboard Shift navigation and held Cross consume selection on release',async({page})=>{
+  await harness(page,false);
+  await page.locator('body').click();
+  await page.keyboard.press('Shift+ArrowLeft');
+  await page.keyboard.down('x');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowUp');await page.keyboard.up('x');
+  expect(await page.evaluate(()=>window.actions.map(action=>action.action))).toEqual(['parent','adjustSmallMore','adjustLargeMore']);
+  await page.keyboard.press('y');expect(await page.evaluate(()=>window.actions.at(-1).action)).toBe('navigation');
+  await page.getByRole('textbox').fill('unchanged');
+  await page.keyboard.press('Shift+ArrowLeft');
+  expect(await page.evaluate(()=>window.actions.at(-1).action)).toBe('parent');
+  await expect(page.getByRole('textbox')).toHaveValue('unchanged');
 });
 
 test('browser input: reports missing and unsupported devices, then reconnects',async({page})=>{

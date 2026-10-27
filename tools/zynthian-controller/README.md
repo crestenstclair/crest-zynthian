@@ -1,5 +1,12 @@
 # Zynthian controller interface
 
+> This branch's Crest Tracker experiment was abandoned on 2026-10-26
+> (2026-10-27 UTC). Its controls, behavior and performance did not meet the
+> intended workflow. The implementation and validation history are preserved for
+> reference, not acceptance. Keep only the desired visual style as a reference
+> for the fresh Crest Zynth approach; do not treat this interaction model as its
+> specification. See the [style archive](../../docs/archive/crest-tracker-ui/index.html).
+
 This is the controller webview supplied in this repository's source archive,
 connected to its matching Zynthian application and native libraries. The design
 reference is the [offline controller manual](../../docs/zynthian-controller-manual.html),
@@ -8,7 +15,8 @@ remain available offline.
 
 The desktop application is a C++ / Qt WebEngine host with native SDL2 controller
 input. It embeds the shared Node/HTML frontend using the manual's supplied
-HTML/CSS style. The browser version retains Gamepad API support. Menus, parameters, routing, mixer, players, settings, snapshots,
+HTML/CSS style. On `experiment/crest-tracker-ui`, the shared frontend uses the
+Crest Tracker layout described below. The browser version retains Gamepad API support. Menus, parameters, routing, mixer, players, settings, snapshots,
 launcher, piano roll and CC editing are browser controls. The browser does not
 display a streamed Python window. Keyboard and standard browser gamepads drive
 the same interface as touch and mouse.
@@ -21,6 +29,67 @@ engine/backend. See the [screen map](controller-node/SCREEN-COVERAGE.md) for all
 51 registered screen IDs, their HTML controls and hardware limits.
 
 ## Run on this Mac or Linux desktop
+
+### Crest Tracker source preview
+
+With the controller image already built, run:
+
+```sh
+bash tools/zynthian-controller/zynthian-controller preview browser
+```
+
+This opens Safari on macOS at port **8768**. Use `preview open` for the existing
+C++/Qt host with SDL controller input. Close the other preview window first;
+only one controller connection is accepted at a time.
+
+The preview mounts this checkout's Node frontend and presentation bridge
+read-only over the installed controller image. It uses container
+`crest-zynthian-tracker` and separate data in
+`~/Library/Application Support/crest-zynthian-tracker/` on macOS, or
+`${XDG_DATA_HOME:-~/.local/share}/crest-zynthian-tracker/` on Linux. The normal
+controller on 8766 and stock runtime on 8765 keep their existing sessions.
+Source mounts and data ownership are checked before reuse, and a session
+directory already used by another running container is rejected.
+
+Reload after frontend edits. After bridge edits, run `preview stop` followed by
+`preview browser`. `preview status` and `preview logs` inspect this separate
+runtime. Native-library changes still require an image rebuild.
+
+- **Song** shows the native scene/launcher. Select a pad to open its phrase;
+  **Launch** or **Play** starts the selected native clip. Row follow actions and
+  scene options stay in the context menu.
+- **Phrase** opens a single-track tracker, with a piano-roll alternative over
+  the same native events. Move between rows and Note / Velocity / Event /
+  Offset / Chance / Stutter fields. Hold Cross and use directions to enter or
+  adjust a note without a separate insertion tap. The Event field cycles through
+  Empty, Note and OFF; Select cycles it too. New notes sustain through empty rows
+  until the next note, OFF or pattern end. Clear cell removes the event; clearing
+  OFF restores the preceding sustain. Undo/Redo use native pattern history.
+  Existing notes keep their timing until edited; fixed lengths remain available
+  through the native note editor and length shortcuts.
+  Circle + Up opens a full Pattern options page with directly editable play mode,
+  length, resolution, tempo, swing, quantization, scale and other properties.
+  Circle + Down returns to the phrase. Length/resolution changes that can lose
+  notes retain the native confirmation.
+- **Instruments** lists loaded Zynthian sounds. Each opens its processors,
+  bank/preset browser, parameters and MIDI/audio routing. **Routing graph**
+  exposes native chain/processor operations. **+ Add instrument** at the bottom
+  opens engine categories directly. Selecting a category opens only that engine
+  list; Circle + Left returns to categories. There is no tracker Chain layer.
+- **Mixer** provides native level faders, balance, mute and solo. Select a
+  strip's control to expose its additional output controls.
+- **Workspaces** is the top-level menu: Sequencer, Instruments, Mixer, Song
+  files, Performance, recordings and Settings. Circle + Left moves back through
+  Phrase, Song and Workspaces. **Triangle** opens Quick jump, including native
+  routing, clock, snapshots, ZS3 and the native main menu.
+
+The single-track tracker stores sustain as native note duration and OFF as a
+native zero-velocity MIDI note-on, which releases the note. Per-note MIDI channels
+and independent tracker tracks remain unimplemented. Euclidean and Randomizer
+remain design previews. No alternate note store, engine, clock or snapshot format
+has been introduced.
+
+### Standard controller runtime
 
 For a physical Raspberry Pi with Pisound, see the
 [Pi trial guide](runtime/RASPBERRY-PI.md). It uses this same HTML controller with
@@ -81,14 +150,44 @@ draft is saved automatically where storage is available. This is a design
 handoff for implementation, not a live runtime configuration loader. See the
 [workbook format and source](control-map/README.md).
 
-The manual defines the mappings. Arrows / D-pad navigate, Enter / A selects,
-Esc / B goes back, Home / Start opens Main Menu, F2 opens Mixer, F3 opens
-Snapshots, and F6 opens the launcher. In editors, Space / X plays, F4 / Y edits,
-Tab / left-stick click opens the context menu, and Shift / LB gives fine changes.
-Right stick changes note length and velocity; F7 / right-stick click selects a
-block. Visible Options buttons expose per-item actions; More screens opens the
-remaining navigation routes. Parameter rows have minus/plus and numeric entry.
-Controller layout remains provisional. The native status line identifies devices
+The live Crest frontend uses Sony button positions on all standard controllers:
+
+| Input | Behavior | Keyboard |
+| --- | --- | --- |
+| D-pad | Move rows and fields / menu selection | Arrows |
+| × Cross (bottom) | Select; insert into an empty note cell | X or Enter |
+| Hold × + Left / Right | Smaller change | Hold X + Left / Right |
+| Hold × + Up / Down | Larger change | Hold X + Up / Down |
+| ○ Circle (right) | Tap Back; hold as Shift | O; Escape for Back |
+| Hold ○ + Left | Parent; keep held to reach Workspaces | Shift + Left |
+| Hold ○ + Right | Enter selected destination | Shift + Right |
+| Hold ○ + Up | Pattern options / context details | Shift + Up |
+| Hold ○ + Down | Return from details to workspace | Shift + Down |
+| △ Triangle (top) | Quick jump | Y, T or F5 |
+| □ Square (left) | Context options | S |
+| Start / Options | Play / stop in sequencer | Space |
+| Back / Share | Workspaces | Home |
+
+L1 is another Shift button. Holding Circle shows `○ SHIFT`; holding Cross shows
+`× ADJUST`. A short tap commits on release. A chord or a hold of at least 350 ms
+consumes the tap, so releasing an adjustment or navigation gesture does not
+also select or go back. Play/record presses are suppressed while either modifier
+is held and stay suppressed until that transport button is released.
+Pitch changes are one semitone or octave; velocity changes are 1 or 10. The
+Event field cycles Empty / Note / OFF. Parameter controls use their native
+fine/coarse steps. Pointer buttons provide equivalent edits and Clear cell.
+Row, field and piano-roll cursor movement is local to the frontend, including
+while an edit awaits acknowledgement. Edits send explicit step and pitch-row
+targets to Zynthian; replies do not move a cursor that has since moved elsewhere.
+Routine acknowledgements leave the connection label and mounted editor intact.
+Naming has a normal text field, Save and Cancel, plus the controller keyboard.
+Escape or Shift + Left leaves naming without saving.
+
+F2 opens Mixer, F3 Song files and F6 Song. Right stick retains length/velocity
+shortcuts; F7 / right-stick click selects a native block. Visible Options buttons
+expose per-item actions. The original manual and offline design demo retain
+earlier proposed mappings; the table above describes this branch's live UI.
+The native status line identifies devices
 read by SDL; browser previews use the browser Gamepad API. Physical mapping
 validation is separate from virtual-controller regression tests.
 
@@ -140,8 +239,9 @@ recording/playback, processor and routing edits, and ZS3/MIDI-learn restoration
 after a backend restart. It does not establish every optional engine or hardware
 workflow.
 
-The existing tracker, Euclidean and randomizer designs remain interactive
-previews. They are not promoted to native playback by this runtime work.
+The full tracker sustain/OFF design, Euclidean and randomizer designs remain
+interactive previews. The Crest tracker projection described above edits and
+plays existing native notes without implementing those additional semantics.
 The original manual is a design reference; the screen map records current HTML
 coverage. Custom engine graphs currently expose their parameter pages and scalar
 monitor values. Wi-Fi, Bluetooth, ALSA, CV and physical display controls depend

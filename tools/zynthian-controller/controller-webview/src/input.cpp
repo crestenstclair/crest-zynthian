@@ -82,6 +82,34 @@ void Input::setActive(bool active) {
     active_ = active;
     held_.clear();
     armed_.clear();
+    updateGamepadState();
+}
+
+// The web frontend interprets gestures for both SDL and browser controllers.
+// Normalize SDL's physical positions to the standard browser gamepad layout.
+static QVariantMap normalizedGamepad(SDL_JoystickID id, SDL_GameController* controller) {
+    const SDL_GameControllerButton buttons[] = {SDL_CONTROLLER_BUTTON_A, SDL_CONTROLLER_BUTTON_B,
+            SDL_CONTROLLER_BUTTON_X, SDL_CONTROLLER_BUTTON_Y, SDL_CONTROLLER_BUTTON_LEFTSHOULDER,
+            SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, SDL_CONTROLLER_BUTTON_INVALID, SDL_CONTROLLER_BUTTON_INVALID,
+            SDL_CONTROLLER_BUTTON_BACK, SDL_CONTROLLER_BUTTON_START, SDL_CONTROLLER_BUTTON_LEFTSTICK,
+            SDL_CONTROLLER_BUTTON_RIGHTSTICK, SDL_CONTROLLER_BUTTON_DPAD_UP, SDL_CONTROLLER_BUTTON_DPAD_DOWN,
+            SDL_CONTROLLER_BUTTON_DPAD_LEFT, SDL_CONTROLLER_BUTTON_DPAD_RIGHT};
+    QVariantList values, axes;
+    for (auto button : buttons) values.append(button != SDL_CONTROLLER_BUTTON_INVALID && SDL_GameControllerGetButton(controller, button));
+    for (int axis = 0; axis < 4; ++axis) axes.append(SDL_GameControllerGetAxis(controller, SDL_GameControllerAxis(axis)) / 32768.0);
+    return {{"connected", true}, {"id", id}, {"buttons", values}, {"axes", axes}};
+}
+
+void Input::updateGamepadState() {
+    QVariantMap state{{"connected", false}};
+    if (active_) for (const auto& [id, controller] : controllers_) {
+        if (!armed_.contains(id)) continue;
+        state = normalizedGamepad(id, controller);
+        break;
+    }
+    if (state == gamepadState_) return;
+    gamepadState_ = state;
+    emit gamepadStateChanged(state);
 }
 
 bool Input::neutral(SDL_GameController* controller) const {
@@ -109,6 +137,7 @@ void Input::poll() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) handleEvent(event);
     updateArmed();
+    updateGamepadState();
     if (!active_) return;
     for (auto& [key, next] : held_) {
         if ((key.second < SDL_CONTROLLER_BUTTON_DPAD_UP || key.second > SDL_CONTROLLER_BUTTON_DPAD_RIGHT) &&

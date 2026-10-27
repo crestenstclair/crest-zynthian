@@ -48,7 +48,7 @@ function bridgeConnection(client, socketPath) {
       const command = JSON.parse(data);
       if (binary || !command || Array.isArray(command) || typeof command !== 'object') throw Error();
       // Never offer eval, shell, unrestricted CUIA or arbitrary file access.
-      if (!['state', 'action', 'activate', 'adjust', 'sequence', 'set'].includes(command.method)) throw Error();
+      if (!['state', 'action', 'activate', 'adjust', 'sequence', 'set', 'text'].includes(command.method)) throw Error();
       if (!native.writable || native.writableLength > MAX_FRAME) throw Error();
       native.write(JSON.stringify(command)+'\n');
     } catch {

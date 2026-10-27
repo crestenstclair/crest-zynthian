@@ -3,11 +3,26 @@ set -euo pipefail
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 name=crest-zynthian-controller
 image=localhost/zynthian-controller:overlay
+port=8766
+runtime_label=controller
+preview=0
+source_mounts=()
 host_build="$here/../../build/controller-webview"
+if [[ ${1:-} == preview ]]; then
+    shift
+    preview=1
+    name=crest-zynthian-tracker
+    port=8768
+    runtime_label=controller-preview
+    source_mounts=(
+        --mount "type=bind,source=$here/controller-node,target=/opt/controller/controller-node,readonly"
+        --mount "type=bind,source=$here/zynwebview,target=/opt/controller/zynwebview,readonly"
+    )
+fi
 if [[ $(uname -s) == Darwin ]]; then
-    data="${ZYNTHIAN_CONTROLLER_DATA:-$HOME/Library/Application Support/crest-zynthian-controller}"
+    data="${ZYNTHIAN_CONTROLLER_DATA:-$HOME/Library/Application Support/$name}"
 else
-    data="${ZYNTHIAN_CONTROLLER_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/crest-zynthian-controller}"
+    data="${ZYNTHIAN_CONTROLLER_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/$name}"
 fi
 [[ $data == /* ]] || { echo 'ZYNTHIAN_CONTROLLER_DATA must be absolute.' >&2; exit 2; }
 if [[ ${1:-start} != host-build ]]; then
@@ -17,11 +32,27 @@ existing() { docker container inspect "$name" >/dev/null 2>&1; }
 check_owner() {
     local label mount
     label=$(docker inspect -f '{{index .Config.Labels "org.crest-zynthian.runtime"}}' "$name")
-    [[ $label == controller ]] || { echo "Container $name is not this controller runtime; leaving it untouched." >&2; exit 1; }
+    [[ $label == "$runtime_label" ]] || { echo "Container $name is not this controller runtime; leaving it untouched." >&2; exit 1; }
     mount=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' "$name")
     [[ $mount == "$data" ]] || { echo "Container uses $mount; requested $data. Leaving it untouched." >&2; exit 1; }
+    if [[ $preview == 1 ]]; then
+        local component
+        for component in controller-node zynwebview; do
+            mount=$(docker inspect -f "{{range .Mounts}}{{if eq .Destination \"/opt/controller/$component\"}}{{.Source}}:{{.RW}}{{end}}{{end}}" "$name")
+            [[ $mount == "$here/$component:false" ]] || { echo "Preview uses a different source mount; leaving it untouched." >&2; exit 1; }
+        done
+    fi
 }
-print_url() { printf 'http://localhost:8766/#token=%s\n' "$(cat "$data/access-token")"; }
+print_url() { printf 'http://localhost:%s/#token=%s\n' "$port" "$(cat "$data/access-token")"; }
+check_data_available() {
+    local container owner mount
+    for container in $(docker ps -q); do
+        owner=$(docker inspect -f '{{.Name}}' "$container")
+        [[ $owner != "/$name" ]] || continue
+        mount=$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/data"}}{{.Source}}{{end}}{{end}}' "$container")
+        [[ $mount != "$data" ]] || { echo "Session data is already in use by $owner; leaving it untouched." >&2; exit 1; }
+    done
+}
 build_host() {
     cmake -S "$here/controller-webview" -B "$host_build" -DCMAKE_BUILD_TYPE=Release
     cmake --build "$host_build" --target zynthian-controller --parallel 4
@@ -31,9 +62,9 @@ open_host() {
     # Rebuild incrementally so launch always uses this checkout's native code.
     build_host
     if [[ $(uname -s) == Darwin ]]; then
-        open "$host_build/zynthian-controller.app" --args --token-file "$data/access-token"
+        open "$host_build/zynthian-controller.app" --args --url "http://localhost:$port/" --token-file "$data/access-token"
     else
-        exec "$host_build/zynthian-controller" --token-file "$data/access-token"
+        exec "$host_build/zynthian-controller" --url "http://localhost:$port/" --token-file "$data/access-token"
     fi
 }
 build() {
@@ -45,11 +76,15 @@ build() {
 start() {
     mkdir -p "$data"
     data=$(cd "$data" && pwd)
+    check_data_available
     if existing; then
         check_owner
         docker start "$name" >/dev/null
     else
-        docker image inspect "$image" >/dev/null 2>&1 || build
+        if ! docker image inspect "$image" >/dev/null 2>&1; then
+            [[ $preview == 0 ]] || { echo 'Build the controller image before starting a source preview.' >&2; exit 1; }
+            build
+        fi
         python3 - "$data/access-token" <<'PY'
 import os, secrets, sys
 try:
@@ -61,11 +96,12 @@ else:
         token.write(secrets.token_urlsafe(32) + '\n')
 PY
         docker run -d --init --name "$name" --user "$(id -u):$(id -g)" \
-            --shm-size=256m --stop-timeout=30 -p 127.0.0.1:8766:8766 \
-            --mount "type=bind,source=$data,target=/data" "$image" >/dev/null
+            --label "org.crest-zynthian.runtime=$runtime_label" \
+            --shm-size=256m --stop-timeout=30 -p "127.0.0.1:$port:$port" -e "CONTROLLER_PORT=$port" \
+            --mount "type=bind,source=$data,target=/data" ${source_mounts[@]+"${source_mounts[@]}"} "$image" >/dev/null
     fi
     for _ in {1..90}; do
-        if curl -fsS http://localhost:8766/health 2>/dev/null | python3 -c 'import json,sys;sys.exit(not json.load(sys.stdin)["ready"])' 2>/dev/null; then print_url; return; fi
+        if curl -fsS "http://localhost:$port/health" 2>/dev/null | python3 -c 'import json,sys;sys.exit(not json.load(sys.stdin)["ready"])' 2>/dev/null; then print_url; return; fi
         if [[ $(docker inspect -f '{{.State.Running}}' "$name") != true ]]; then
             echo "Startup failed. See $data/logs/backend.log and frontend.log." >&2; return 1
         fi
@@ -83,5 +119,5 @@ case "${1:-start}" in
     status) check_owner; docker inspect -f '{{.State.Status}}' "$name" ;;
     url) check_owner; print_url ;;
     logs) check_owner; tail -n 60 "$data/logs/backend.log" "$data/logs/frontend.log" ;;
-    *) echo "Usage: $0 {start|open|browser|stop|status|url|logs|build|host-build}" >&2; exit 2 ;;
+    *) echo "Usage: $0 [preview] {start|open|browser|stop|status|url|logs|build|host-build}" >&2; exit 2 ;;
 esac

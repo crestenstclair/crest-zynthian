@@ -3,6 +3,7 @@
 from types import SimpleNamespace as NS
 from unittest.mock import Mock
 import unittest
+from copy import deepcopy
 from test_bridge import ScreenAdapter, upstream_method
 
 
@@ -19,6 +20,12 @@ def pattern_fixture(cc=False):
     lib.getPatternPlayhead.return_value = 6
     lib.getPlayState.return_value = 1
     lib.getNoteStart.side_effect = lambda step, note: next((s for (s,n),e in events.items() if n == note and s <= step < s+e.duration), -1)
+    def event_at(index, target):
+        if index >= len(events): return -1
+        (step,note),data=list(events.items())[index]
+        target.__dict__.update(data.__dict__,position=step,val1_start=note,command=0x90)
+        return index
+    lib.getEventDataAt.side_effect=event_at
     seq = NS(scene=0, libseq=lib, get_tempo=lambda: 120.0,
              get_note_data=lambda step,note: events.get((step,note)))
     screen = NS(zynseq=seq, pattern=5, phrase=1, sequence=0, channel=0,
@@ -37,6 +44,7 @@ def pattern_fixture(cc=False):
         screen.selected_cell = [max(0,min(screen.n_steps-1,screen.selected_cell[0] if step is None else step)),
                                 max(0,min(127,screen.selected_cell[1] if row is None else row))]
     screen.select_cell=Mock(side_effect=select)
+    screen.get_default_note_evdata=lambda:event()
     screen.set_edit_mode=Mock(side_effect=lambda mode: setattr(screen,'edit_mode',mode))
     for action in ('up','down','left','right'): setattr(screen,'arrow_'+action,Mock())
     gui = NS(current_screen='pated_cc' if cc else 'pattern_editor', screens={},toggle_pated=Mock(),
@@ -85,6 +93,117 @@ class TestSequencer(unittest.TestCase):
         self.screen.switch_select.assert_not_called()
         for a,b in ((-1,64),(800,64),(4,100),(True,64)):
             with self.assertRaises(ValueError):self.command('cell',first=a,second=b)
+    def test_tracker_projects_all_pitches_and_continuations_without_writes(self):
+        self.screen.selected_cell = [16, 64]
+        self.events[(0, 24)] = event(73, 24, .1)
+        grid = self.adapter.snapshot()['sequence']
+        self.assertNotIn(24, [row['note'] for row in grid['rows']])
+        bass = next(e for e in grid['events'] if e['note'] == 24)
+        self.assertEqual((bass['step'], bass['velocity'], bass['duration'], bass['offset']), (0, 73, 24, .1))
+        self.command('trackerCell', first=16, second=24)
+        self.screen.select_cell.assert_called_once_with(0, 24)  # Native cursor selects the continuing note's onset.
+        self.screen.zynseq.libseq.addNote.assert_not_called()
+        self.screen.switch_select.assert_not_called()
+        continued=self.adapter.snapshot()
+        self.assertEqual(continued['sequence']['selected'],[0,24])
+        self.assertEqual(continued['sequence']['trackerSelected'],[16,24])
+        self.assertIn(16,continued['sequence']['trackerSteps'])
+        self.command('trackerCell',first=17,second=24)
+        self.assertEqual(self.adapter.snapshot()['sequence']['trackerSelected'],[17,24])
+        with self.assertRaisesRegex(ValueError,'Screen changed'):
+            self.adapter.dispatch(dict(method='sequence',action='remove',first=16,second=24,revision=continued['revision']))
+        for step, row in ((0,24), (16,128), (16,True)):
+            with self.assertRaises(ValueError):self.command('trackerCell', first=step, second=row)
+        with self.assertRaises(ValueError):self.command('open', first=16, second=24)
+    def test_tracker_rejects_changed_keymap_before_selecting(self):
+        revision = self.adapter.snapshot()['revision']
+        self.screen.keymap[24]['note'] = 25
+        with self.assertRaisesRegex(ValueError, 'Screen changed'):
+            self.adapter.dispatch(dict(method='sequence', action='trackerCell', first=4, second=24, revision=revision))
+        self.screen.select_cell.assert_not_called()
+    def test_tracker_edits_use_native_history_and_do_not_toggle_existing_notes(self):
+        self.screen.add_note_event=Mock();self.screen.remove_event=Mock();self.screen.draw_grid=Mock()
+        self.command('insert',first=0,second=60)
+        self.screen.add_note_event.assert_not_called()
+        self.command('insert',first=3,second=60)
+        self.screen.add_note_event.assert_called_once_with(3,60,100,1.,0.)
+        self.command('editCell',first=0,second=60,field='velocity',delta=1,large=True)
+        self.screen.zynpot_cb.assert_called_with(2,10)
+        self.assertEqual((self.screen.edit_mode,self.screen.edit_param),(0,0))
+        self.assertEqual(self.screen.save_pattern_snapshot.call_count,2)
+        self.command('remove',first=1,second=60)
+        self.screen.remove_event.assert_called_once_with(0,60)
+    def test_pitch_move_preserves_expression_and_rejects_collision_before_writes(self):
+        self.screen.draw_grid=Mock()
+        self.events[(0,61)]=event()
+        with self.assertRaisesRegex(ValueError,'overlaps'):
+            self.command('editCell',first=0,second=60,field='pitch',delta=1)
+        self.screen.zynseq.libseq.addNote.assert_not_called()
+        del self.events[(0,61)]
+        self.command('editCell',first=0,second=60,field='pitch',delta=1)
+        self.screen.zynseq.libseq.setNoteData.assert_called_once_with(0,61,self.events[(0,60)])
+        self.screen.zynseq.libseq.removeNote.assert_called_once_with(0,60)
+        self.screen.zynseq.libseq.playNote.assert_called_once_with(60,0,0)
+        self.assertEqual(self.screen.save_pattern_snapshot.call_count,2)
+    def test_tracker_adjustment_validates_field_delta_and_visible_target(self):
+        for args in (dict(first=0,second=60,field='shell',delta=1),dict(first=0,second=60,field='velocity',delta=True),dict(first=32,second=60,field='pitch',delta=1)):
+            with self.assertRaises(ValueError):self.command('editCell',**args)
+        self.screen.zynseq.libseq.addNote.assert_not_called()
+    def test_directed_edits_reach_any_pattern_step_without_prior_cursor_command(self):
+        self.screen.add_note_event=Mock()
+        self.screen.selected_cell=[0,60]
+        self.command('insert',first=30,second=72)
+        self.screen.add_note_event.assert_called_once_with(30,72,100,1.,0.)
+        self.command('lengthMore',first=4,second=64,directed=True)
+        self.screen.select_cell.assert_called_with(4,64)
+        self.screen.zynpot_cb.assert_called_with(2,1)
+        self.events[(30,72)]=event(76,1)
+        self.assertTrue(any(event['step']==30 for event in self.adapter.snapshot()['sequence']['events']))
+        for step,row in ((-1,72),(32,72),(0,128),(True,60)):
+            with self.assertRaises(ValueError):self.command('insert',first=step,second=row)
+
+    def test_tracker_hold_inserts_sustain_off_and_clear_restore_native_durations(self):
+        self.events.clear()
+        lib = self.screen.zynseq.libseq
+        self.screen.draw_grid = Mock()
+        def add(step, note, velocity, duration, offset):
+            self.events[(step, note)] = event(velocity, duration, offset)
+            return True
+        def set_data(step, note, data):
+            target = self.events[(step, note)]
+            duration, offset = target.duration, target.offset
+            target.__dict__.update(deepcopy(data.__dict__))
+            target.duration, target.offset = duration, offset
+        lib.addNote.side_effect = add
+        lib.setNoteData.side_effect = set_data
+        lib.removeNote.side_effect = lambda step, note: self.events.pop((step, note), None)
+        self.command('editCell', first=0, second=60, field='velocity', delta=1, large=True, tracker=True)
+        self.assertEqual((self.events[(0,60)].val2_start, self.events[(0,60)].duration), (110,32))
+        self.command('editCell', first=8, second=60, field='event', delta=-1, tracker=True)
+        self.assertEqual(self.events[(8,60)].val2_start,0)
+        self.assertEqual(self.events[(0,60)].duration,8)
+        self.command('remove',first=8,second=60,tracker=True)
+        self.assertNotIn((8,60),self.events)
+        self.assertEqual(self.events[(0,60)].duration,32)
+        self.assertEqual(self.screen.save_pattern_snapshot.call_count,6)
+        self.command('editCell', first=16, second=60, field='pitch', delta=1, tracker=True)
+        self.assertEqual(self.events[(0,60)].duration,16)
+        self.assertEqual(self.events[(16,61)].duration,16)
+
+    def test_tracker_invalid_edit_never_inserts_or_shortens_notes(self):
+        before = deepcopy(self.events)
+        for values in [dict(field='unknown', delta=1),dict(field='velocity',delta=True),dict(field='event',delta=100)]:
+            with self.assertRaises(ValueError):self.command('editCell',first=2,second=60,tracker=True,**values)
+        self.assertEqual(self.events,before)
+        self.screen.save_pattern_snapshot.assert_not_called()
+
+    def test_details_on_pattern_does_not_open_native_options(self):
+        self.adapter.show_details()
+        self.assertEqual(self.adapter.detail_workspace,'pattern_editor')
+        self.screen.show_menu.assert_not_called()
+        self.adapter.return_workspace()
+        self.assertIsNone(self.adapter.detail_workspace)
+        self.gui.show_screen.assert_not_called()
     def test_native_actions_transport_record_undo_and_editor_switch(self):
         for action,callback in [('select',self.screen.switch_select),('play',self.screen.toggle_playback),
                                 ('record',self.screen.toggle_midi_record),('undo',self.screen.undo_pattern),
@@ -111,7 +230,7 @@ class TestSequencer(unittest.TestCase):
         self.command('lengthMore',fine=True)
         self.screen.zynpot_cb.assert_called_once_with(1,1)
         self.assertEqual((self.screen.edit_mode,self.screen.edit_param),(0,0))
-        self.assertEqual(self.screen.save_pattern_snapshot.call_count,2)
+        self.screen.save_pattern_snapshot.assert_not_called()  # Native add_note_event owns length history.
         self.screen.edit_mode=1
         with self.assertRaises(ValueError):self.command('lengthLess')
     def test_paging_and_fine_native_edit(self):
@@ -169,6 +288,31 @@ class TestSequencer(unittest.TestCase):
         self.assertTrue(self.adapter.snapshot()['sequence']['moving'])
         self.command('up');self.screen.arrow_up.assert_called_once()
         self.command('select');self.screen.switch_select.assert_called_with('S')
+    def test_open_selects_validated_pad_before_invoking_native_editor(self):
+        self.gui,self.screen=launcher_fixture();self.adapter=ScreenAdapter(self.gui)
+        opened=[]
+        self.screen.edit_pad.side_effect=lambda:opened.append((self.screen.zynseq.phrase,self.screen.highlighted_strip.chain.chain_id))
+        self.command('open',first=2,second=2)
+        self.assertEqual(opened,[(2,2)])
+        for phrase,chain in ((8,2),(2,99),(True,2)):
+            with self.assertRaises(ValueError):self.command('open',first=phrase,second=chain)
+        revision=self.adapter.snapshot()['revision']
+        self.screen.zynseq.phrase=1
+        with self.assertRaisesRegex(ValueError,'Screen changed'):
+            self.adapter.dispatch(dict(method='sequence',action='open',first=2,second=2,revision=revision))
+        self.screen.edit_pad.assert_called_once()
+        self.screen.switch_select.assert_not_called()
+    def test_open_phrase_selects_existing_voice_without_changing_events(self):
+        self.screen.selected_cell=[0,56]
+        launcher=NS(edit_pad=Mock())
+        self.adapter.sequencer.open_selected_clip(launcher)
+        launcher.edit_pad.assert_called_once()
+        self.assertEqual(self.screen.selected_cell,[0,48])
+        self.screen.zynseq.libseq.addNote.assert_not_called()
+        self.screen.select_cell.reset_mock()
+        self.adapter.sequencer.open_selected_clip(launcher)
+        self.screen.select_cell.assert_not_called()  # Preserve an existing selected voice.
+
     def test_real_upstream_toggle_uses_existing_note_and_chord_callbacks(self):
         toggle=upstream_method('zynthian_gui_pated_notes.py','zynthian_gui_pated_notes','toggle_event')
         self.screen.add_chord=Mock();self.screen.remove_chord=Mock()

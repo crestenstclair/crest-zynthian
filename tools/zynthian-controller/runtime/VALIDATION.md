@@ -5,7 +5,203 @@ backend in this Mac's Linux ARM64 Docker runtime. Tests used live backend state,
 FluidSynth and native MIDI sequencing/mixing, not fixture-driven screen data.
 The visible application contains HTML controls; no native window stream is used.
 
+## Crest Tracker frontend pass — 2026-10-27 UTC
+
+### Direct properties, category navigation and tracker OFF
+
+This follow-up replaces the nested pattern-options workflow with a full HTML
+property page. Shift/Circle + Up exposes the native pattern and sequence values
+directly. Play mode, length, resolution, tempo, quantization, swing, humanization,
+probability, scale, root, input rest and chord settings use existing native
+controllers and setters. Destructive length/resolution changes retain native
+confirmation. Song details target the frontend's selected clip. Engine categories
+now open a separate engine list, with local Back navigation to categories.
+
+Held Cross adjustment on an empty tracker cell inserts and edits in one native
+history operation. The Event field replaces the primary Length column and selects
+Empty, Note or OFF. New notes sustain to the next event or pattern end. An OFF is
+a native zero-velocity MIDI note-on; preceding held notes end there. Clearing it
+restores sustain. Existing fixed durations are preserved until explicitly edited.
+No native engine, event database, clock or snapshot format was replaced.
+
+Run: `2026-10-27T04:11:09.108Z`; branch `experiment/crest-tracker-ui`; base
+`22f6dc49a5953784450d8d65550eb7bb270cb363` plus uncommitted changes. The image is
+`sha256:75f35b26ab00471c9b775c4b6d544115558b7162a086d5d5dfc5336871ee60c4`
+with read-only source mounts. Evidence remains in `/tmp/crest-controls-khI2fC`.
+`direct-controls-source-manifest.json` hashes 57 files, SHA-256
+`a6368219f17ea8a5673b8bc66997a3b91728f196a23728ebb06f7bc711e1c498`.
+This validation entry was written after that source capture.
+
+- 20 Node unit tests and 59 bridge tests passed.
+- 13 browser checks passed across controls, input, recall, navigation and delayed
+  replies. The direct-properties workflow was rerun after final visual changes.
+- Live checks changed Play mode and Swing on the property page without opening
+  another menu; cancelled pattern truncation without losing notes; entered a note
+  by holding Cross; inserted OFF; cleared it; undid the clear; saved and recalled
+  the native events; entered Sampler and Synth lists and returned to categories.
+- Song details opened the locally selected second clip. The 650 ms delayed-reply
+  regression still kept row movement local and preserved mounted controls.
+- Safari restored `004-New Snapshot.zss`, retaining the user's FluidSynth and Calf
+  Wavetable instruments and second-clip notes. It is left on the direct Pattern
+  options page. `direct-properties-safari.png` captures this session;
+  `tracker-native-off.png` captures OFF in disposable test data.
+- `git diff --check` passed; test logs contained no traceback or allocator crash.
+  C++ host code was unchanged. Physical input/audio timing was not requalified.
+
+The optional sustain/OFF clarification had no reply before implementation; the
+existing manual's empty/sustain and explicit-OFF behavior guided this pass.
+Independent tracks and per-note MIDI channel assignment remain outside this pass.
+The user preview remains on port 8768; only the disposable test container on 8770
+is stopped afterward. Evidence directories contain credentials and must not be
+published wholesale.
+
+### Responsive controls follow-up
+
+Navigation had been sending a backend request for every tracker row and rebuilding
+the screen on pending/acknowledgement transitions. The frontend now owns cursor
+and field movement. Writes carry explicit note coordinates; native events,
+validation, history and persistence remain owned by Zynthian. Backend replies
+cannot overwrite newer local selection. Routine command acknowledgements do not
+change Connected to Working or disable and rebuild the whole screen.
+
+The run used branch `experiment/crest-tracker-ui`, base
+`22f6dc49a5953784450d8d65550eb7bb270cb363` plus uncommitted changes, and image
+`sha256:75f35b26ab00471c9b775c4b6d544115558b7162a086d5d5dfc5336871ee60c4`
+with source mounts. Evidence is retained in `/tmp/crest-controls-khI2fC`.
+`responsive-source-manifest.json` records 54 source/test/documentation files at
+`2026-10-27T03:37:45.052Z`, SHA-256
+`e1fdeb540c13f6465ed5c542c8afbddc2e75d2e36cf31949bae350097dc6cd2e`.
+This validation entry was written afterward. Results are recorded separately in
+`responsive-validation-results.json`, preserving the earlier run's manifest.
+
+- 19 Node unit tests and 56 bridge tests passed.
+- Six browser input tests, two live controls workflows, recall and navigation
+  workflows, and two responsive-controls regressions passed.
+- Ten tracker row moves sent zero backend commands and retained the same DOM
+  nodes. With replies delayed 650 ms, an edit targeted step 10 while the cursor
+  moved to step 12 immediately and stayed there after acknowledgement.
+- Piano cursor movement retained the same SVG, moved the visible highlight and
+  sent no backend commands. Native events project into local pitch/step pages.
+  CC editing and clip-move actions retain their native command path.
+- Simulated Circle showed the held modifier immediately, emitted no Play even
+  with Play focused, and opened details only when Up was added. Long holds,
+  overlapping modifiers and transport release ordering did not emit trailing
+  taps or playback. `responsive-circle-held.png` captures simulated input.
+- Safari reloaded the final frontend and exercised local row movement against
+  the user's preview. The session was preserved as `003-New Snapshot.zss` before
+  the backend update; note duration 1.9 and offset 0.02 remained intact.
+- `git diff --check` passed. Backend logs contained no traceback, segmentation
+  fault or allocator error. C++ code was unchanged in this follow-up; the prior
+  host build/core result below remains the applicable native check.
+
+Physical Circle behavior is **not verified** in this run: Safari reported
+“Browser sees no controller” pending the user's physical button trial. These
+tests establish frontend gesture handling and responsiveness under delayed
+replies, not hardware input, real-time audio or latency guarantees. Edits remain
+serialized while acknowledgements are pending; there is no speculative note
+store or new sequencer clock. The preview remains on port 8768; only disposable
+test container `crest-controls-test` on port 8770 is stopped after verification.
+
+### Controller gestures and single-track editing follow-up
+
+The follow-up used the same base commit and native image below, with the current
+uncommitted Node/HTML, C++ input and presentation-adapter changes. Local evidence
+is `/tmp/crest-controls-khI2fC`, using disposable container `crest-controls-test`
+on port 8770. Its `source-manifest.json` records the exact 54 source/test files
+across `controller-node`, `controller-webview` and `zynwebview`; documentation
+in this validation file was written afterward.
+The manifest was captured at `2026-10-27T02:47:34.750Z`, SHA-256
+`627c4ea34d98aae2484a7055b7388d3bb76129b9d42da9ce61e72a6e22dcb7f5`.
+
+- 16 Node unit tests, 55 bridge tests and the native `controller-core` suite
+  passed; the C++/Qt host rebuilt successfully.
+- Six input browser tests passed: SDL/WebChannel initialization, shared held
+  Cross/Circle gestures, keyboard chords, text-field escape and reconnects.
+  Three existing offline design-demo checks also passed.
+- Two live controls workflows passed: note selection, empty-cell insertion,
+  pitch semitone/octave changes, velocity/length edits, pointer adjustments,
+  explicit removal, single-step Undo/Redo, details/inline-value return,
+  root/quick-jump navigation, Instruments/Add, instrument details, naming
+  cancellation and saved-note recall.
+- Native duration callbacks own their history snapshots; the adapter no longer
+  adds a duplicate undo entry. Tracker row/window focus is presentation state;
+  continuation cells address the native note onset without rewriting events.
+  Boundary tests cover a long note across tracker windows and stale commands.
+- Live navigation and post-restart snapshot/audio checks passed. Audio capture
+  contained 28,160 scalar PCM samples, RMS 0.0247171562, peak 0.1022184640.
+  The test logs contained no Python traceback or segmentation/allocator error.
+- Safari exercised Shift + Up/Down detail entry/return and Shift + Left from
+  Phrase through Song to Workspaces. The user's existing session was saved as
+  `002-New Snapshot` before updating port 8768 and restored afterward.
+
+This pass keeps one native track and the existing engines, routing and snapshot
+format. SDL virtual-controller tests and browser input samples establish gesture
+logic, not a new physical held-button trial. Docker audio used the dummy clock;
+this does not validate physical speakers, latency, Steam Deck or Raspberry Pi.
+Evidence contains credentials/session data; do not publish its directory wholesale.
+
+This later run used branch `experiment/crest-tracker-ui`, base commit
+`22f6dc49a5953784450d8d65550eb7bb270cb363` plus uncommitted frontend and presentation
+bridge changes. The base commit alone does not contain this implementation.
+The installed native runtime image remained
+`sha256:75f35b26ab00471c9b775c4b6d544115558b7162a086d5d5dfc5336871ee60c4`.
+The current `controller-node` and `zynwebview` directories were mounted read-only
+over that image; engine libraries and session formats were unchanged.
+
+Evidence directories:
+
+- `/tmp/crest-tracker-live-JNK7Tn`: native note/tracker/audio/save and fresh-process recall.
+- `/tmp/crest-tracker-regression-vpFYmW`: existing screen, routing, recorder and recall
+  regressions; final layout captures; C++ and Safari screenshots.
+- The latter directory's `source-manifest.json` records 551 source files,
+  branch, base, image and capture time. SHA-256:
+  `4effe2595e90fa3e78feaf445c0adbdd35cb5e757c699e449ce010511fdca0be`.
+  Documentation was updated after capture. Final cursor/control hint text was
+  checked in Safari after the automated workflow pass.
+
+Results:
+
+- 13 Node unit tests and 49 bridge tests passed. Added checks cover local
+  navigation, hidden routing/mixer controls, tracker axes, atomic pad opening,
+  stale keymaps and notes outside the piano roll's pitch window.
+- Eight browser input/offline-plan checks passed. Fixture plan results do not
+  establish live tracker sustain/OFF semantics.
+- Three Crest browser workflows passed: create FluidSynth, edit four native
+  notes in piano/tracker, change velocity and undo, set mixer level to 0.61,
+  save; restart and explicitly recall; navigate using the keyboard menu and
+  inspect live layouts/cursor visibility.
+- The existing HTML screen workflow, three routing/MIDI-learn/ZS3/recording
+  workflows and two fresh-process recall workflows passed with the new shell.
+- C++ host build and `controller-core` CTest suite passed. The host rendered
+  the live frontend on port 8768 and reported Nintendo Switch Pro Controller.
+  This proves device detection, not a new physical button-mapping trial.
+- Safari loaded the saved snapshot, displayed the restored 0.61 mixer level,
+  opened Song/Phrase/Tracker and started/stopped playback with audio enabled.
+- Shell syntax, refusal to share the running controller's data directory,
+  existing-container reuse, and `git diff --check` passed.
+
+The first Crest audio capture contained 31,232 scalar PCM samples, RMS
+0.0304628 and peak 0.134057. A separate backend process restored the four notes
+and produced non-silent browser audio again. Backend logs contained no Python
+traceback, segmentation fault or allocator corruption. JACK used the Docker
+dummy clock and reported XRUNs; this is not physical audio or latency validation.
+
+The retained source preview uses container `crest-zynthian-tracker`, port 8768,
+and separate host data. A copy of the task-created `001-New Snapshot` is available
+there for exploration. Existing user containers on 8765/8766 were not replaced.
+See [preview commands](../README.md#crest-tracker-source-preview).
+
+This pass adds a tracker projection of native note durations and polyphony.
+Independent tracks, empty-cell sustain/OFF conversion, per-note MIDI channel
+assignment, Euclidean and Randomizer playback remain unimplemented. No alternate
+sequencer clock, event database, engine algorithm or snapshot format was added.
+Physical Steam Deck, Raspberry Pi, USB and sustained real-time checks remain
+outstanding. Evidence directories contain access tokens/session data; do not
+publish them wholesale.
+
 ## Exact build and run
+
+The sections below describe the preceding 2026-10-24 validation.
 
 - Run: `2026-10-24` UTC (`2026-10-23`, America/Los_Angeles).
 - Repository base: `3d60032a019f031931917951b36a4e073b5d2fbd` **plus uncommitted

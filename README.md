@@ -1,9 +1,15 @@
 # crest-zynthian
 
+> **Abandoned experiment:** `experiment/crest-tracker-ui` is retained as an
+> archive, not the direction for Crest Zynth. User testing rejected its behavior
+> and performance. The visual style is preserved separately in
+> [the style reference](docs/archive/crest-tracker-ui/index.html).
+
 Public Zynthian host designs and native Linux runtime packaging.
 
 - [Steam Deck / Linux x86-64 build and installation](tools/zynthian-steamdeck/README.md)
 - [Controller interface: C++ web host / HTML, separate runtime](tools/zynthian-controller/README.md)
+- [Crest Tracker × Zynthian: interactive mapping plan and offline demo](docs/crest-tracker-zynthian-plan.html)
 - [Offline control-mapping workbook: describe controls and export JSON](docs/zynthian-control-mapping.html)
 - [Playable Mac / Linux browser runtime](tools/zynthian-web/README.md)
 - [Interactive control-map design](design/firmware-control-map.html)

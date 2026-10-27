@@ -113,7 +113,7 @@ test('parity: MIDI learn and ZS3 persistence',async({page})=>{
   expect((await state(page)).items.find(item=>item.label==='volume').value).toBe(30);
   await navigation(page,'ZS3');await choose(page,'chorus');await processor(page);
   expect((await state(page)).items.find(item=>item.label==='volume').value).toBe(70);
-  await home(page);await page.locator('nav [data-action="snapshots"]').click();await ready(page);
+  await navigation(page,'snapshots');
   await choose(page,'Save as new snapshot');await nameText(page,'parity-session');
   await capture(page,'parity-05-saved');
 });

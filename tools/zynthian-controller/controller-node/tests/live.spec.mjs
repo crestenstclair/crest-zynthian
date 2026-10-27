@@ -43,11 +43,9 @@ test('HTML screen workflows',async({page})=>{
   await back(page);
   await page.getByRole('button',{name:'Help',exact:true}).click();await ready(page);
   await choose(page,'Controller interface');await capture(page,'19-help');
-  await home(page);await page.getByRole('button',{name:/^Mixer/}).click();await ready(page);await capture(page,'20-mixer');
+  await navigation(page,'mixer');await capture(page,'20-mixer');
   await page.keyboard.press('F6');await ready(page);await capture(page,'21-launcher');
   await page.locator('.clip[aria-label*="FluidSynth"]').first().click();await ready(page);
-  await page.getByRole('button',{name:'☰ Menu',exact:true}).click();
-  await choose(page,'Edit selected clip / phrase');
   expect((await state(page)).screen).toBe('pattern_editor');
   await page.getByRole('button',{name:'± Note',exact:true}).click();await ready(page);
   await page.keyboard.press(']');await ready(page);await capture(page,'22-piano-roll');
@@ -55,14 +53,14 @@ test('HTML screen workflows',async({page})=>{
   await choose(page,'Edit CC');await page.getByRole('button',{name:'± Event',exact:true}).click();await ready(page);
   await capture(page,'24-cc-editor');
   await audibleSequence(page,'25-browser-audio');
-  await page.locator('nav [data-action="snapshots"]').click();await ready(page);await capture(page,'26-snapshots');
+  await navigation(page,'snapshots');await capture(page,'26-snapshots');
   await choose(page,'Save as new snapshot');await capture(page,'27-keyboard');await choose(page,/^Save/);
   await ready(page);await capture(page,'28-saved');
   expect(errors).toEqual([]);
 });
 
 test('snapshot recall after process restart',async({page})=>{
-  await home(page);await page.locator('nav [data-action="snapshots"]').click();await ready(page);
+  await navigation(page,'snapshots');
   await choose(page,'001-New Snapshot');await choose(page,'Load');await ready(page);
   await capture(page,'29-recalled');
   await audibleSequence(page,'30-recalled-browser-audio');
