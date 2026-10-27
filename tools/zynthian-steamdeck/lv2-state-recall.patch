@@ -1,0 +1,17 @@
+diff --git a/zyngine/zynthian_processor.py b/zyngine/zynthian_processor.py
+--- a/zyngine/zynthian_processor.py
++++ b/zyngine/zynthian_processor.py
+@@ -791,7 +791,12 @@
+         # Set preset
+         if "preset_info" in state:
+             try:
+-                res = self.set_preset(state["preset_info"], force_set_engine=False)
++                # LV2 presets may contain opaque state that controller replay
++                # cannot reconstruct, even when the preset is already selected.
++                res = self.set_preset(
++                    state["preset_info"],
++                    force_set_engine=self.eng_code.startswith("JV/")
++                )
+             except:
+                 res = False
+                 logging.exception(traceback.format_exc())

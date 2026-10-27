@@ -1,0 +1,109 @@
+--- a/src/jalv.c
++++ b/src/jalv.c
+@@ -1777,6 +1777,20 @@
+ 		update_ui_title(jalv);
+ 		//jalv_print_ports(jalv, true, false);
+ 		jalv->unset_default = jalv->opts.unset_default;
++  } else if (strncmp(cmd, "state ", 6) == 0) {
++    char action[8], token[33], path[1024];
++    int end = 0;
++    int status = 1;
++    if (sscanf(cmd, "state %7s %32[0-9a-f] %1023[^\n]%n",
++               action, token, path, &end) == 3 &&
++        (cmd[end] == '\n' || cmd[end] == '\0')) {
++      if (!strcmp(action, "save")) status = jalv_save(jalv, path);
++      else if (!strcmp(action, "load")) status = jalv_load_snapshot(jalv, path);
++      fprintf(stdout, "#STA> %s %d\n", token, status);
++      fflush(stdout);
++    } else {
++      fprintf(stderr, "error: invalid state command\n");
++    }
+ 	} else if (sscanf(cmd, "save preset %1023[-a-zA-Z0-9_:/.%%#, ]", sym) == 1) {
+ 		jalv_command_save_preset(jalv,sym);
+ 		// Rebuild preset menu and update window title
+@@ -1795,6 +1809,8 @@
+ 		        "  preset URI        Set preset\n"
+ 		        "  presetd URI       Set preset, defaulting unset controls\n"
+ 		        "  presetn URI       Set preset, never defaulting unset controls\n"
++            "  state save TOKEN DIRECTORY  Save complete current state\n"
++            "  state load TOKEN FILE       Restore state without selecting a preset\n"
+ 		        "  save preset [BANK_URI,] LABEL\n"
+ 		        "                    Save preset (BANK_URI is optional)\n"
+ 		        "  set INDEX VALUE   Set control value by port index\n"
+--- a/src/state.c
++++ b/src/state.c
+@@ -49,9 +49,15 @@
+   return NULL;
+ }
+ 
+-void
++int
+ jalv_save(Jalv* jalv, const char* dir)
+ {
++  // Flush queued controls and stabilize opaque state before reading it.
++  const bool resume = jalv->play_state == JALV_RUNNING;
++  if (resume) {
++    jalv->play_state = JALV_PAUSE_REQUESTED;
++    zix_sem_wait(&jalv->paused);
++  }
+   jalv->save_dir = jalv_strjoin(dir, "/");
+ 
+   LilvState* const state =
+@@ -67,13 +73,15 @@
+                                  LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE,
+                                  NULL);
+ 
+-  lilv_state_save(
+-    jalv->world, &jalv->map, &jalv->unmap, state, NULL, dir, "state.ttl");
++  const int status = state ? lilv_state_save(
++    jalv->world, &jalv->map, &jalv->unmap, state, NULL, dir, "state.ttl") : 1;
+ 
+   lilv_state_free(state);
+ 
+   free(jalv->save_dir);
+   jalv->save_dir = NULL;
++  if (resume) jalv->play_state = JALV_RUNNING;
++  return status;
+ }
+ 
+ int
+@@ -373,3 +381,24 @@
+ 	jalv_apply_preset(jalv, preset);
+ 	lilv_node_free(preset);
+ }
++
++int
++jalv_load_snapshot(Jalv* jalv, const char* path)
++{
++  LilvState* state = lilv_state_new_from_file(jalv->world, &jalv->map, NULL, path);
++  if (!state) return 1;
++  const bool matches = lilv_node_equals(lilv_state_get_plugin_uri(state),
++                                        lilv_plugin_get_uri(jalv->plugin));
++  if (matches) {
++    const bool resume = jalv->play_state == JALV_RUNNING;
++    if (resume) {
++      jalv->play_state = JALV_PAUSE_REQUESTED;
++      zix_sem_wait(&jalv->paused);
++    }
++    jalv_apply_state(jalv, state);
++    jalv->request_update = true;
++    if (resume) jalv->play_state = JALV_RUNNING;
++  }
++  lilv_state_free(state);
++  return matches ? 0 : 1;
++}
+--- a/src/state.h
++++ b/src/state.h
+@@ -41,8 +41,11 @@
+                  const char* label,
+                  const char* filename);
+ 
+-void
++int
+ jalv_save(Jalv* jalv, const char* dir);
++
++int
++jalv_load_snapshot(Jalv* jalv, const char* path);
+ 
+ void
+ jalv_save_port_values(Jalv* jalv, SerdWriter* writer, const SerdNode* subject);

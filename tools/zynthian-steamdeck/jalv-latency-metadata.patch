@@ -1,0 +1,35 @@
+--- a/src/port.h
++++ b/src/port.h
+@@ -30,6 +30,7 @@
+   uint32_t        index;     ///< Port index
+   float           control;   ///< For control ports, otherwise 0.0f
+   float           defval;    ///< For control ports, otherwise 0.0f
++  bool            reports_latency; ///< Static LV2 reportsLatency property
+   bool            is_set;    ///< For control ports: is value set?
+ };
+ 
+--- a/src/jalv.c
++++ b/src/jalv.c
+@@ -252,6 +252,10 @@
+     port->type    = TYPE_CONTROL;
+     port->defval = isnan(default_value) ? 0.0f : default_value;
+     port->control = port->defval;
++    // Query immutable RDF metadata before the audio callback starts.
++    port->reports_latency = port->flow == FLOW_OUTPUT &&
++      lilv_port_has_property(
++        jalv->plugin, port->lilv_port, jalv->nodes.lv2_reportsLatency);
+     if (!hidden) {
+       add_control(&jalv->controls,
+                   new_port_control(jalv->world,
+--- a/src/jack.c
++++ b/src/jack.c
+@@ -317,8 +317,7 @@
+     struct Port* const port = &jalv->ports[p];
+     if (port->flow != FLOW_OUTPUT) continue;
+     if (port->type == TYPE_CONTROL) {
+-      if (lilv_port_has_property(
+-          jalv->plugin, port->lilv_port, jalv->nodes.lv2_reportsLatency)) {
++      if (port->reports_latency) {
+         if (jalv->plugin_latency != port->control) {
+           jalv->plugin_latency = port->control;
+           jack_recompute_total_latencies(client);

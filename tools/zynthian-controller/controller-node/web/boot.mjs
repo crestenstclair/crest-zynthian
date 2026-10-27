@@ -3,8 +3,9 @@ import {ControllerModel} from './model.mjs';
 import {installInput} from './input.mjs';
 import {installAudio} from './audio.mjs';
 
-// Preserve the supplied optional Qt host while Node is the desktop entry point.
-if (typeof qt !== 'undefined') {
+// The older direct-socket test host still uses bundled assets. The desktop host
+// loads the same HTTP frontend as remote browsers and supplies only native input.
+if (location.protocol === 'qrc:' && typeof qt !== 'undefined') {
   const script = document.createElement('script');
   script.src = 'qrc:///qtwebchannel/qwebchannel.js';
   script.onload = () => new QWebChannel(qt.webChannelTransport, channel => window.attachBackend(channel.objects.zynthian));

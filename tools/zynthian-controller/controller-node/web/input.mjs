@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-const keyActions = {
+export const keyActions = {
   ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right', PageUp:'pageUp', PageDown:'pageDown',
   Enter:'select', Escape:'back', Backspace:'back', Home:'home', F2:'mixer', F3:'snapshots', F4:'bold',
   F5:'menu', F6:'launcher', F7:'block', ' ':'play', r:'record', Tab:'focus', '[':'lengthLess', ']':'lengthMore',
@@ -34,21 +34,57 @@ export function installInput(model) {
       if (repeated.has(action) && model.view.kind !== 'sequencer') document.querySelector('#items .selected')?.focus({preventScroll:true});
     }
   });
+  // SDL and browser Gamepad API are alternative sources for the shared model.
+  if (window.zynthianNativeHost) {
+    const attach = () => {
+      const input = window.zynthianNativeInput;
+      if (!input) return;
+      const updateStatus = () => { model.inputStatus = input.status; model.notify(); };
+      input.statusChanged.connect(updateStatus);
+      input.actionTriggered.connect((action, fine) => model.input(action, fine));
+      updateStatus();
+    };
+    model.inputStatus = 'Connecting native SDL input…'; model.notify();
+    if (window.zynthianNativeInput) attach();
+    else window.addEventListener('zynthian-native-ready', attach, {once:true});
+    return;
+  }
   let armed = false, identity = '', held = new Map();
   const release = () => { armed = false; held.clear(); };
+  const status = text => {
+    if (model.inputStatus === text) return;
+    model.inputStatus = text; model.notify();
+  };
   window.addEventListener('blur', release);
   window.addEventListener('gamepaddisconnected', release);
   function poll(now) {
-    const pad = [...(navigator.getGamepads?.() || [])].find(p => p?.mapping === 'standard');
-    if (!pad || document.hidden || !document.hasFocus()) { release(); requestAnimationFrame(poll); return; }
+    // Keep polling even after a denied/failed API call; keyboard input still works.
+    requestAnimationFrame(poll);
+    let pads;
+    try {
+      if (!navigator.getGamepads) { status('Browser gamepad API unavailable'); release(); return; }
+      pads = [...navigator.getGamepads()].filter(Boolean);
+    } catch (error) {
+      status(`Browser gamepad access failed: ${error.message}`); release(); return;
+    }
+    const pad = pads.find(p => p.mapping === 'standard');
+    if (!pad) {
+      status(pads.length ? `Unsupported browser mapping: ${pads.map(p => p.id).join(' / ')}` :
+        'Browser sees no controller · press a controller button');
+      release(); identity = ''; return;
+    }
+    if (document.hidden || !document.hasFocus()) {
+      status(`${pad.id} · click this window to enable input`); release(); return;
+    }
     if (identity !== `${pad.index}:${pad.id}`) {
       release(); identity = `${pad.index}:${pad.id}`;
-      model.inputStatus = pad.id; model.notify();
     }
     if (!armed) {
       armed = !pad.buttons.some(button => button.pressed) && !pad.axes.some(axis => Math.abs(axis) > 0.55);
-      requestAnimationFrame(poll); return;
+      status(armed ? pad.id : `${pad.id} · release buttons and center sticks`);
+      return;
     }
+    status(pad.id);
     const {actions, fine} = gamepadActions(pad);
     for (const action of held.keys()) if (!actions.has(action)) held.delete(action);
     for (const action of actions) {
@@ -57,7 +93,6 @@ export function installInput(model) {
         held.set(action, now + delay); model.input(action, fine);
       }
     }
-    requestAnimationFrame(poll);
   }
   requestAnimationFrame(poll);
 }

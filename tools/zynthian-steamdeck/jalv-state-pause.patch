@@ -1,0 +1,37 @@
+--- a/src/jack.c
++++ b/src/jack.c
+@@ -193,11 +193,10 @@
+   jalv->bpm      = has_bbt ? pos.beats_per_minute : jalv->bpm;
+   jalv->rolling  = rolling;
+ 
++  // Finish this cycle, including queued UI events, before acknowledging pause.
++  // State restore must not overlap run() or be overwritten by older controls.
++  const bool pause_requested = jalv->play_state == JALV_PAUSE_REQUESTED;
+   switch (jalv->play_state) {
+-  case JALV_PAUSE_REQUESTED:
+-    jalv->play_state = JALV_PAUSED;
+-    zix_sem_post(&jalv->paused);
+-    break;
+   case JALV_PAUSED:
+     for (uint32_t p = 0; p < jalv->num_ports; ++p) {
+       jack_port_t* jport = jalv->ports[p].sys_port;
+@@ -272,7 +271,7 @@
+ 
+   // Run plugin for this cycle
+   bool send_ui_updates = false;
+-  if (jalv->bypass != 1)
++  if (jalv->bypass != 1 || pause_requested)
+     send_ui_updates = jalv_run(jalv, nframes);
+ 
+   // Do soft switch bypass
+@@ -392,6 +391,10 @@
+       }
+     }
+   }
++  if (pause_requested) {
++    jalv->play_state = JALV_PAUSED;
++    zix_sem_post(&jalv->paused);
++  }
+   return 0;
+ }
+ 

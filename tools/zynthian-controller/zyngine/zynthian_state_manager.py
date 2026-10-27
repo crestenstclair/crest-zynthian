@@ -1513,6 +1513,8 @@ class zynthian_state_manager:
                         processor.set_state(proc_state)
                 except Exception as e:
                     logging.error(f"Failed to restore processor {proc_id} state => {e}")
+                    if "lv2_state" in proc_state:
+                        raise RuntimeError(f"Failed to restore LV2 snapshot for processor {proc_id}") from e
 
         for cc_map in restored_cc_mapping:
             processor = self.chain_manager.processors[cc_map[0]]
@@ -1644,15 +1646,15 @@ class zynthian_state_manager:
             note = zs3.get("note", "")
 
         # Initialise zs3
-        self.zs3[zs3_id] = {
+        saved_state = {
             "title": title,
             "active_chain": self.chain_manager.active_chain.chain_id,
             "global": {}
         }
         if restore_midi_learn:
-            self.zs3[zs3_id]["restore_midi_learn"] = True
+            saved_state["restore_midi_learn"] = True
         if note:
-            self.zs3[zs3_id]["note"] = note
+            saved_state["note"] = note
 
         chain_states = {}
         for chain_id, chain in self.chain_manager.chains.items():
@@ -1699,50 +1701,40 @@ class zynthian_state_manager:
             if chain_state:
                 chain_states[chain_id] = chain_state
         if chain_states:
-            self.zs3[zs3_id]["chains"] = chain_states
+            saved_state["chains"] = chain_states
 
         # Add processors
         processor_states = {}
         for id, processor in self.chain_manager.processors.items():
-            processor_state = {
-                "bank_info": processor.bank_info,
-                "bank_subdir_info": processor.bank_subdir_info,
-                "preset_info": processor.preset_info,
-                "preset_subdir_info": processor.preset_subdir_info,
-                "controllers": {},
-                "current_screen_index": processor.current_screen_index
-            }
-
+            complete_state = processor.get_state()
+            keys = ('bank_info', 'bank_subdir_info', 'preset_info', 'preset_subdir_info', 'controllers', 'lv2_state', 'current_screen_index')
+            processor_state = {key: complete_state[key] for key in keys if key in complete_state}
             if id in omit_processors:
                 processor_state["restore"] = False
-
-            # Add controllers
-            for symbol, zctrl in processor.controllers_dict.items():
-                processor_state["controllers"][symbol] = zctrl.get_state()
             processor_states[id] = processor_state
         if processor_states:
-            self.zs3[zs3_id]["processors"] = processor_states
+            saved_state["processors"] = processor_states
 
         # Add MIDI capture state
         mcstate = self.get_midi_capture_state()
         if mcstate:
-            self.zs3[zs3_id]["midi_capture"] = mcstate
+            saved_state["midi_capture"] = mcstate
 
         # Add global parameters
-        self.zs3[zs3_id]["global"]["clock_source"] = zynautoconnect.get_ext_clock_device_name()
-        self.zs3[zs3_id]["global"]["clock_outputs"] = zynautoconnect.get_midi_clock_output_ports()
-        self.zs3[zs3_id]["global"]["zynseq_excluded_inputs"] = zynautoconnect.get_zynseq_exclude_ports()
-        self.zs3[zs3_id]["global"]["midi_transpose"] = lib_zyncore.get_global_transpose()
+        saved_state["global"]["clock_source"] = zynautoconnect.get_ext_clock_device_name()
+        saved_state["global"]["clock_outputs"] = zynautoconnect.get_midi_clock_output_ports()
+        saved_state["global"]["zynseq_excluded_inputs"] = zynautoconnect.get_zynseq_exclude_ports()
+        saved_state["global"]["midi_transpose"] = lib_zyncore.get_global_transpose()
         try:
             processor_id = self.zctrl_x.processor.id
             symbol = self.zctrl_x.symbol
-            self.zs3[zs3_id]["global"]["zctrl_x"] = [processor_id, symbol]
+            saved_state["global"]["zctrl_x"] = [processor_id, symbol]
         except:
             pass
         try:
             processor_id = self.zctrl_y.processor.id
             symbol = self.zctrl_y.symbol
-            self.zs3[zs3_id]["global"]["zctrl_y"] = [processor_id, symbol]
+            saved_state["global"]["zctrl_y"] = [processor_id, symbol]
         except:
             pass
         try:
@@ -1755,16 +1747,18 @@ class zynthian_state_manager:
                     "cvout_volts_octave": lib_zyncore.zynaptik_cvout_get_volts_octave(),
                     "cvout_note0": lib_zyncore.zynaptik_cvout_get_note0()
                 }
-                self.zs3[zs3_id]["global"]["zynaptik"] = zynaptik_config
+                saved_state["global"]["zynaptik"] = zynaptik_config
         except:
             pass
 
+        # Commit only after every processor has successfully captured its state.
+        self.zs3[zs3_id] = saved_state
         if zs3_id == 'zs3-0':
             self.last_zs3_id = None
         else:
             self.last_zs3_id = zs3_id
             # Jofemodo: this has not sense from my POV
-            #self.zs3['zs3-0'] = self.zs3[zs3_id].copy()
+            #self.zs3['zs3-0'] = saved_state.copy()
         zynsigman.send(zynsigman.S_STATE_MAN, zynsigman.SS_SAVE_ZS3, zs3_id=zs3_id)
 
     def delete_zs3(self, zs3_id):

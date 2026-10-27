@@ -79,6 +79,29 @@ so it cannot keep Python waiting for a closed UI during shutdown. The autoconnec
 JACK client is explicitly closed on shutdown. Mixer, sequencer and MIDI-file
 callbacks stop before their buffers and objects are released. Autoconnect waits
 for both audio-player ports to appear on PipeWire before connecting them.
+Snapshots and ZS3 embed the current LV2 state bundle, including unsaved opaque
+state and any resources copied by Lilv. Saving does not create a user preset or
+change the selected preset's identity. Recall applies controller mappings first,
+then restores the captured state after queued controls have completed. Older
+snapshots without an embedded bundle keep the selected-preset/controller path.
+New embedded state requires this patched runtime; older runtimes ignore it.
+The host briefly pauses plugin processing while capturing or restoring a bundle.
+Archives are limited to 512 MiB of decoded files and 4096 resources; invalid
+paths, links and duplicate names are rejected. Capture failure preserves the
+previous ZS3; state restore failure is reported instead of accepting partial
+opaque recall. Restored resources remain available until the engine replaces
+that state or stops. This captures only what the plugin's state interface saves;
+volatile DSP history is not added by the host.
+Jalv completes its current JACK callback and queued controls before acknowledging
+a pause for non-thread-safe LV2 state restoration. The regression fixture checks
+that audio processing and state restoration never overlap, including through
+PipeWire's JACK interface.
+Jalv caches each control port’s immutable latency designation during setup,
+so its JACK callback does not query or allocate RDF metadata every cycle.
+Reported plugin latency still updates when the output control value changes.
+Jalv readback and controller commands preserve all significant digits of an
+LV2 float. Snapshot replay therefore does not round small values to zero or
+change saved parameters by truncating controls to six decimal places.
 Native engine algorithms, audio routing decisions and menu
 structure are unchanged.
 

@@ -2,6 +2,8 @@
 #include "input.hpp"
 #include <QEvent>
 #include <QKeyEvent>
+#include <QDebug>
+#include <QStringList>
 
 static QString buttonAction(int button) {
     switch (button) {
@@ -30,13 +32,13 @@ static QString buttonAction(int button) {
     }
 }
 
-Input::Input(Model& model, QObject* parent) : QObject(parent), model_(model) {
+Input::Input(QObject* parent) : QObject(parent) {
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     if (SDL_InitSubSystem(SDL_INIT_GAMECONTROLLER | SDL_INIT_EVENTS) != 0) {
-        model_.setInputStatus(QString("Controller unavailable: %1").arg(SDL_GetError()));
+        setStatus(QString("Controller unavailable: %1").arg(SDL_GetError()));
         return;
     }
-    model_.setInputStatus("Keyboard / touch · no controller connected");
+    setStatus("SDL · no controller connected");
     for (int i = 0; i < SDL_NumJoysticks(); ++i) open(i);
     connect(&timer_, &QTimer::timeout, this, &Input::poll);
     timer_.start(8);
@@ -48,60 +50,108 @@ Input::~Input() {
 }
 
 void Input::open(int index) {
-    if (!SDL_IsGameController(index)) return;
+    if (!SDL_IsGameController(index)) {
+        if (controllers_.empty()) setStatus(QString("SDL · unmapped controller: %1").arg(SDL_JoystickNameForIndex(index)));
+        return;
+    }
     auto* controller = SDL_GameControllerOpen(index);
-    if (!controller) return;
+    if (!controller) { setStatus(QString("SDL · %1").arg(SDL_GetError())); return; }
     const auto id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
     if (controllers_.contains(id)) { SDL_GameControllerClose(controller); return; }
     controllers_[id] = controller;
-    model_.setInputStatus(QString::fromUtf8(SDL_GameControllerName(controller)));
+    updateStatus();
 }
 
-void Input::setActive(bool active) { active_ = active; held_.clear(); }
+void Input::setStatus(const QString& status) {
+    if (status_ == status) return;
+    status_ = status;
+    qInfo().noquote() << status;
+    emit statusChanged(status);
+}
+
+void Input::updateStatus() {
+    QStringList names;
+    for (const auto& [id, controller] : controllers_) {
+        Q_UNUSED(id);
+        names.append(QString::fromUtf8(SDL_GameControllerName(controller)));
+    }
+    setStatus(names.isEmpty() ? "SDL · no controller connected" : "SDL · " + names.join(" / "));
+}
+
+void Input::setActive(bool active) {
+    active_ = active;
+    held_.clear();
+    armed_.clear();
+}
+
+bool Input::neutral(SDL_GameController* controller) const {
+    for (int button = 0; button < SDL_CONTROLLER_BUTTON_MAX; ++button)
+        if (SDL_GameControllerGetButton(controller, SDL_GameControllerButton(button))) return false;
+    for (int axis = SDL_CONTROLLER_AXIS_LEFTX; axis <= SDL_CONTROLLER_AXIS_RIGHTY; ++axis)
+        if (std::abs(int(SDL_GameControllerGetAxis(controller, SDL_GameControllerAxis(axis)))) > 10000) return false;
+    return true;
+}
+
+void Input::updateArmed() {
+    if (!active_) return;
+    for (const auto& [id, controller] : controllers_)
+        if (!armed_.contains(id) && neutral(controller)) armed_.insert(id);
+}
+
+bool Input::fineAdjustment(SDL_JoystickID device) const {
+    const auto found = controllers_.find(device);
+    // SDL batches state updates; event order need not put LB before X/Y.
+    return found != controllers_.end() &&
+        SDL_GameControllerGetButton(found->second, SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
+}
 
 void Input::poll() {
     SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_CONTROLLERDEVICEADDED) open(event.cdevice.which);
-        else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
-            auto it = controllers_.find(event.cdevice.which);
-            if (it != controllers_.end()) { SDL_GameControllerClose(it->second); controllers_.erase(it); }
-            std::erase_if(held_, [&](const auto& p) { return p.first.first == event.cdevice.which; });
-            if (controllers_.empty()) model_.setInputStatus("Keyboard / touch · no controller connected");
-        } else if (event.type == SDL_CONTROLLERAXISMOTION && active_ && event.caxis.axis <= SDL_CONTROLLER_AXIS_RIGHTY) {
-            // Digital navigation with a dead zone and hysteresis; separate state per device.
-            const int base = 100 + event.caxis.axis * 2;
-            const auto negative = std::make_pair(event.caxis.which, base);
-            const auto positive = std::make_pair(event.caxis.which, base + 1);
-            if (event.caxis.value > -10000) held_.erase(negative);
-            if (event.caxis.value < 10000) held_.erase(positive);
-            const int direction = event.caxis.value < -18000 ? base : event.caxis.value > 18000 ? base + 1 : -1;
-            const auto key = std::make_pair(event.caxis.which, direction);
-            if (direction >= 0 && !held_.contains(key)) {
-                held_[key] = SDL_GetTicks() + 350;
-                model_.input(buttonAction(direction), held_.contains({key.first, SDL_CONTROLLER_BUTTON_LEFTSHOULDER}));
-            }
-        } else if (event.type == SDL_CONTROLLERBUTTONUP) {
-            held_.erase({event.cbutton.which, event.cbutton.button});
-        } else if (event.type == SDL_CONTROLLERBUTTONDOWN && active_) {
-            const auto key = std::make_pair(event.cbutton.which, int(event.cbutton.button));
-            if (held_.contains(key)) continue;
-            held_[key] = SDL_GetTicks() + 350;
-            auto action = buttonAction(event.cbutton.button);
-            const bool fine = held_.contains({event.cbutton.which, SDL_CONTROLLER_BUTTON_LEFTSHOULDER});
-            if (fine && action == "bold") action = "menu";
-            if (fine && action == "play") action = "record";
-            if (!action.isEmpty()) model_.input(action, fine);
-        }
-    }
+    while (SDL_PollEvent(&event)) handleEvent(event);
+    updateArmed();
     if (!active_) return;
     for (auto& [key, next] : held_) {
         if ((key.second < SDL_CONTROLLER_BUTTON_DPAD_UP || key.second > SDL_CONTROLLER_BUTTON_DPAD_RIGHT) &&
             (key.second < 100 || key.second > 107)) continue;
         if (Sint32(SDL_GetTicks() - next) >= 0) {
             next = SDL_GetTicks() + 100;
-            model_.input(buttonAction(key.second), held_.contains({key.first, SDL_CONTROLLER_BUTTON_LEFTSHOULDER}));
+            emit actionTriggered(buttonAction(key.second), fineAdjustment(key.first));
         }
+    }
+}
+
+void Input::handleEvent(const SDL_Event& event) {
+    if (event.type == SDL_CONTROLLERDEVICEADDED) open(event.cdevice.which);
+    else if (event.type == SDL_CONTROLLERDEVICEREMOVED) {
+        auto it = controllers_.find(event.cdevice.which);
+        if (it != controllers_.end()) { SDL_GameControllerClose(it->second); controllers_.erase(it); }
+        std::erase_if(held_, [&](const auto& p) { return p.first.first == event.cdevice.which; });
+        armed_.erase(event.cdevice.which);
+        updateStatus();
+    } else if (event.type == SDL_CONTROLLERAXISMOTION && active_ && armed_.contains(event.caxis.which) && event.caxis.axis <= SDL_CONTROLLER_AXIS_RIGHTY) {
+        // Digital navigation with a dead zone and hysteresis; separate state per device.
+        const int base = 100 + event.caxis.axis * 2;
+        const auto negative = std::make_pair(event.caxis.which, base);
+        const auto positive = std::make_pair(event.caxis.which, base + 1);
+        if (event.caxis.value > -10000) held_.erase(negative);
+        if (event.caxis.value < 10000) held_.erase(positive);
+        const int direction = event.caxis.value < -18000 ? base : event.caxis.value > 18000 ? base + 1 : -1;
+        const auto key = std::make_pair(event.caxis.which, direction);
+        if (direction >= 0 && !held_.contains(key)) {
+            held_[key] = SDL_GetTicks() + 350;
+            emit actionTriggered(buttonAction(direction), fineAdjustment(key.first));
+        }
+    } else if (event.type == SDL_CONTROLLERBUTTONUP) {
+        held_.erase({event.cbutton.which, event.cbutton.button});
+    } else if (event.type == SDL_CONTROLLERBUTTONDOWN && active_ && armed_.contains(event.cbutton.which)) {
+        const auto key = std::make_pair(event.cbutton.which, int(event.cbutton.button));
+        if (held_.contains(key)) return;
+        held_[key] = SDL_GetTicks() + 350;
+        auto action = buttonAction(event.cbutton.button);
+        const bool fine = fineAdjustment(event.cbutton.which);
+        if (fine && action == "bold") action = "menu";
+        if (fine && action == "play") action = "record";
+        if (!action.isEmpty()) emit actionTriggered(action, fine);
     }
 }
 
@@ -137,6 +187,6 @@ bool Input::eventFilter(QObject*, QEvent* event) {
     default: return false;
     }
     if (event->type() == QEvent::KeyPress && (!key->isAutoRepeat() || repeat))
-        model_.input(action, key->modifiers().testFlag(Qt::ShiftModifier));
+        emit actionTriggered(action, key->modifiers().testFlag(Qt::ShiftModifier));
     return true;
 }

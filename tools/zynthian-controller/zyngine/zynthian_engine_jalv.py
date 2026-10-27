@@ -32,7 +32,10 @@ import logging
 import traceback
 from time import sleep
 #from datetime import datetime
-from threading import Thread
+from threading import Thread, Event, Lock
+from tempfile import TemporaryDirectory
+from uuid import uuid4
+from zyngine.zynthian_lv2_state import pack_state, unpack_state
 from subprocess import Popen, check_output, STDOUT, PIPE
 
 import zynautoconnect
@@ -57,6 +60,10 @@ class zynthian_engine_jalv_base(zynthian_engine):
         super().__init__(state_manager)
 
         self.proc_poll_thread = None
+        self._snapshot_lock = Lock()
+        self._snapshot_event = Event()
+        self._snapshot_reply = None
+        self._snapshot_directory = None
 
         if state_manager:
             self.eng_info = self.chain_manager.engine_info[eng_code]
@@ -173,6 +180,42 @@ class zynthian_engine_jalv_base(zynthian_engine):
             except Exception as e:
                 logging.error(f"Can't stop engine {self.name} => {e}")
 
+        if self._snapshot_directory is not None:
+            self._snapshot_directory.cleanup()
+            self._snapshot_directory = None
+
+    def _snapshot_command(self, action, path):
+        token = uuid4().hex
+        self._snapshot_reply = (token, None)
+        self._snapshot_event.clear()
+        self.proc_cmd(f"state {action} {token} {path}")
+        if not self._snapshot_event.wait(30):
+            raise RuntimeError(f"Jalv state {action} timed out")
+        if self._snapshot_reply != (token, 0):
+            raise RuntimeError(f"Jalv state {action} failed")
+
+    def get_snapshot_state(self):
+        with self._snapshot_lock:
+            with TemporaryDirectory(prefix="zynthian-lv2-save-", dir="/tmp") as directory:
+                self._snapshot_command("save", directory)
+                return pack_state(directory)
+
+    def restore_snapshot_state(self, state):
+        with self._snapshot_lock:
+            directory = TemporaryDirectory(prefix="zynthian-lv2-load-", dir="/tmp")
+            try:
+                path = unpack_state(state, directory.name)
+                self._snapshot_command("load", path)
+            except Exception:
+                directory.cleanup()
+                raise
+            previous = self._snapshot_directory
+            self._snapshot_directory = directory
+            # Plugins may open restored sample resources lazily. Keep them alive
+            # until another state replaces them or the engine stops.
+            if previous is not None:
+                previous.cleanup()
+
     def proc_cmd(self, cmd):
         #a = datetime.now()
         try:
@@ -215,6 +258,16 @@ class zynthian_engine_jalv_base(zynthian_engine):
                 self.proc_poll_parse_line(line)
 
     def proc_poll_parse_line(self, line):
+        if line.startswith("#STA> "):
+            fields = line.split()
+            if (len(fields) == 3 and self._snapshot_reply is not None
+                    and fields[1] == self._snapshot_reply[0]):
+                try:
+                    self._snapshot_reply = (fields[1], int(fields[2]))
+                except ValueError:
+                    return
+                self._snapshot_event.set()
+            return
         #logging.debug(f"{self.jackname} PARSE => " + line)
         match line[0:5]:
             case "#CTR>":
@@ -590,7 +643,7 @@ class zynthian_engine_jalv_base(zynthian_engine):
                 #logging.debug(f"set {zctrl.graph_path} {val}")
                 self.proc_cmd(f"set {zctrl.graph_path} {val}")
             else:
-                self.proc_cmd("set %d %.6f" % (zctrl.graph_path, zctrl.value))
+                self.proc_cmd("set %d %.9g" % (zctrl.graph_path, zctrl.value))
         else:
             if zctrl.is_path:
                 if zctrl.value:
@@ -601,7 +654,7 @@ class zynthian_engine_jalv_base(zynthian_engine):
                 #logging.debug(f"{zctrl.symbol}={val}")
                 self.proc_cmd(f"{zctrl.symbol}={val}")
             else:
-                self.proc_cmd("%s=%.6f" % (zctrl.symbol, zctrl.value))
+                self.proc_cmd("%s=%.9g" % (zctrl.symbol, zctrl.value))
 
 
 # ------------------------------------------------------------------------------

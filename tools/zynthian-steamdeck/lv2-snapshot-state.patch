@@ -1,0 +1,281 @@
+--- a/zyngine/zynthian_engine_jalv.py
++++ b/zyngine/zynthian_engine_jalv.py
+@@ -32,7 +32,10 @@
+ import traceback
+ from time import sleep
+ #from datetime import datetime
+-from threading import Thread
++from threading import Thread, Event, Lock
++from tempfile import TemporaryDirectory
++from uuid import uuid4
++from zyngine.zynthian_lv2_state import pack_state, unpack_state
+ from subprocess import Popen, check_output, STDOUT, PIPE
+ 
+ import zynautoconnect
+@@ -191,6 +194,10 @@
+         super().__init__(state_manager)
+ 
+         self.proc_poll_thread = None
++        self._snapshot_lock = Lock()
++        self._snapshot_event = Event()
++        self._snapshot_reply = None
++        self._snapshot_directory = None
+ 
+         self.save_bank = None
+         self.save_preset_uri = None
+@@ -366,6 +373,42 @@
+                 self.proc = None
+             except Exception as err:
+                 logging.error(f"Can't stop engine {self.name} => {err}")
++
++        if self._snapshot_directory is not None:
++            self._snapshot_directory.cleanup()
++            self._snapshot_directory = None
++
++    def _snapshot_command(self, action, path):
++        token = uuid4().hex
++        self._snapshot_reply = (token, None)
++        self._snapshot_event.clear()
++        self.proc_cmd(f"state {action} {token} {path}")
++        if not self._snapshot_event.wait(30):
++            raise RuntimeError(f"Jalv state {action} timed out")
++        if self._snapshot_reply != (token, 0):
++            raise RuntimeError(f"Jalv state {action} failed")
++
++    def get_snapshot_state(self):
++        with self._snapshot_lock:
++            with TemporaryDirectory(prefix="zynthian-lv2-save-", dir="/tmp") as directory:
++                self._snapshot_command("save", directory)
++                return pack_state(directory)
++
++    def restore_snapshot_state(self, state):
++        with self._snapshot_lock:
++            directory = TemporaryDirectory(prefix="zynthian-lv2-load-", dir="/tmp")
++            try:
++                path = unpack_state(state, directory.name)
++                self._snapshot_command("load", path)
++            except Exception:
++                directory.cleanup()
++                raise
++            previous = self._snapshot_directory
++            self._snapshot_directory = directory
++            # Plugins may open restored sample resources lazily. Keep them alive
++            # until another state replaces them or the engine stops.
++            if previous is not None:
++                previous.cleanup()
+ 
+     def proc_cmd(self, cmd):
+         #a = datetime.now()
+@@ -408,6 +451,16 @@
+                 self.proc_poll_parse_line(line)
+ 
+     def proc_poll_parse_line(self, line):
++        if line.startswith("#STA> "):
++            fields = line.split()
++            if (len(fields) == 3 and self._snapshot_reply is not None
++                    and fields[1] == self._snapshot_reply[0]):
++                try:
++                    self._snapshot_reply = (fields[1], int(fields[2]))
++                except ValueError:
++                    return
++                self._snapshot_event.set()
++            return
+         #logging.debug(f"{self.jackname} PARSE => " + line)
+         match line[0:5]:
+             case "#CTR>":
+--- /dev/null
++++ b/zyngine/zynthian_lv2_state.py
+@@ -0,0 +1,74 @@
++"""Portable LV2 state bundles embedded in Zynthian snapshots.
++
++Lilv owns state serialization and resource mapping. This module only transports
++the resulting directory, including files referenced by the state document.
++"""
++import base64
++import io
++from pathlib import Path, PurePosixPath
++import stat
++import zipfile
++
++
++MAX_STATE_BYTES = 512 * 1024 * 1024
++MAX_STATE_FILES = 4096
++
++
++def pack_state(directory):
++    root = Path(directory)
++    if not (root / 'state.ttl').is_file():
++        raise ValueError('LV2 state document is missing')
++    files = sorted(path for path in root.rglob('*') if path.is_file())
++    if len(files) > MAX_STATE_FILES or sum(p.stat().st_size for p in files) > MAX_STATE_BYTES:
++        raise ValueError('LV2 snapshot state exceeds the bundle limit')
++    stream = io.BytesIO()
++    with zipfile.ZipFile(stream, 'w', compression=zipfile.ZIP_DEFLATED) as archive:
++        for path in files:
++            # Lilv may link sample resources. Store their contents, not links.
++            archive.write(path, path.relative_to(root).as_posix())
++    if stream.tell() > MAX_STATE_BYTES + 1024 * 1024:
++        raise ValueError('LV2 snapshot archive exceeds the bundle limit')
++    return {'format': 'lv2-bundle-zip-v1',
++            'data': base64.b64encode(stream.getvalue()).decode('ascii')}
++
++
++def unpack_state(state, directory):
++    if state.get('format') != 'lv2-bundle-zip-v1':
++        raise ValueError('Unsupported LV2 snapshot state format')
++    encoded = state['data']
++    if not isinstance(encoded, str) or len(encoded) > (MAX_STATE_BYTES + 1024 * 1024) * 4 // 3:
++        raise ValueError('LV2 snapshot state exceeds the bundle limit')
++    payload = base64.b64decode(encoded, validate=True)
++    root = Path(directory)
++    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
++        entries = archive.infolist()
++        if len(entries) > MAX_STATE_FILES or sum(p.file_size for p in entries) > MAX_STATE_BYTES:
++            raise ValueError('LV2 snapshot state exceeds the bundle limit')
++        names = set()
++        for entry in entries:
++            path = PurePosixPath(entry.filename)
++            kind = stat.S_IFMT(entry.external_attr >> 16)
++            if (path.is_absolute() or '..' in path.parts or not path.parts
++                    or '\\' in entry.filename or '\x00' in entry.filename
++                    or entry.filename != path.as_posix()
++                    or entry.filename in names or kind not in (0, stat.S_IFREG)):
++                raise ValueError('Invalid LV2 snapshot resource path')
++            names.add(entry.filename)
++        if 'state.ttl' not in names:
++            raise ValueError('LV2 state document is missing')
++        # Fresh private directory only. Never extract archive paths directly.
++        for entry in entries:
++            target = root / entry.filename
++            target.parent.mkdir(parents=True, exist_ok=True)
++            with target.open('xb') as output:
++                with archive.open(entry) as source:
++                    remaining = entry.file_size
++                    while remaining:
++                        block = source.read(min(remaining, 1024 * 1024))
++                        if not block:
++                            raise ValueError('Truncated LV2 state resource')
++                        output.write(block)
++                        remaining -= len(block)
++                    if source.read(1):
++                        raise ValueError('Invalid LV2 state resource size')
++    return root / 'state.ttl'
+--- a/zyngine/zynthian_processor.py
++++ b/zyngine/zynthian_processor.py
+@@ -757,6 +757,8 @@
+             "controllers": {},
+             "current_screen_index": self.current_screen_index  # TODO: GUI
+         }
++        if self.eng_code.startswith("JV/"):
++            state["lv2_state"] = self.engine.get_snapshot_state()
+         # Get controller values
+         for symbol in self.controllers_dict:
+             state['controllers'][symbol] = self.controllers_dict[symbol].get_state()
+@@ -829,6 +831,10 @@
+                         zctrl.midi_cc_debounce = ctrl_state['midi_cc_debounce']
+                 except Exception as e:
+                     logging.warning(f"Invalid controller for processor {self.get_basepath()}: {e}")
++
++        if "lv2_state" in state and self.eng_code.startswith("JV/"):
++            # Restore opaque state after all queued controller commands.
++            self.engine.restore_snapshot_state(state["lv2_state"])
+ 
+     def restore_state_legacy(self, state):
+         """Restore legacy states from state
+--- a/zyngine/zynthian_state_manager.py
++++ b/zyngine/zynthian_state_manager.py
+@@ -1510,6 +1510,8 @@
+                         processor.set_state(proc_state)
+                 except Exception as e:
+                     logging.error(f"Failed to restore processor {proc_id} state => {e}")
++                    if "lv2_state" in proc_state:
++                        raise RuntimeError(f"Failed to restore LV2 snapshot for processor {proc_id}") from e
+ 
+         for cc_map in restored_cc_mapping:
+             processor = self.chain_manager.processors[cc_map[0]]
+@@ -1614,7 +1616,7 @@
+                 title = f"ZS3-{index}"
+ 
+         # Initialise zs3
+-        self.zs3[zs3_id] = {
++        saved_state = {
+             "title": title,
+             "active_chain": self.chain_manager.active_chain_id,
+             "global": {}
+@@ -1666,47 +1668,40 @@
+             if chain_state:
+                 chain_states[chain_id] = chain_state
+         if chain_states:
+-            self.zs3[zs3_id]["chains"] = chain_states
++            saved_state["chains"] = chain_states
+ 
+         # Add processors
+         processor_states = {}
+         for id, processor in self.chain_manager.processors.items():
+-            processor_state = {
+-                "bank_info": processor.bank_info,
+-                "bank_subdir_info": processor.bank_subdir_info,
+-                "preset_info": processor.preset_info,
+-                "preset_subdir_info": processor.preset_subdir_info,
+-                "controllers": {}
+-            }
+-            # Add controllers
+-            for symbol, zctrl in processor.controllers_dict.items():
+-                processor_state["controllers"][symbol] = zctrl.get_state()
++            complete_state = processor.get_state()
++            keys = ('bank_info', 'bank_subdir_info', 'preset_info', 'preset_subdir_info', 'controllers', 'lv2_state')
++            processor_state = {key: complete_state[key] for key in keys if key in complete_state}
+             processor_states[id] = processor_state
+         if processor_states:
+-            self.zs3[zs3_id]["processors"] = processor_states
++            saved_state["processors"] = processor_states
+ 
+         # Add mixer state
+         mixer_state = self.zynmixer.get_state(False)
+         if mixer_state:
+-            self.zs3[zs3_id]["mixer"] = mixer_state
++            saved_state["mixer"] = mixer_state
+ 
+         # Add MIDI capture state
+         mcstate = self.get_midi_capture_state()
+         if mcstate:
+-            self.zs3[zs3_id]["midi_capture"] = mcstate
++            saved_state["midi_capture"] = mcstate
+ 
+         # Add global parameters
+-        self.zs3[zs3_id]["global"]["midi_transpose"] = lib_zyncore.get_global_transpose()
++        saved_state["global"]["midi_transpose"] = lib_zyncore.get_global_transpose()
+         try:
+             processor_id = self.zctrl_x.processor.id
+             symbol = self.zctrl_x.symbol
+-            self.zs3[zs3_id]["global"]["zctrl_x"] = [processor_id, symbol]
++            saved_state["global"]["zctrl_x"] = [processor_id, symbol]
+         except:
+             pass
+         try:
+             processor_id = self.zctrl_y.processor.id
+             symbol = self.zctrl_y.symbol
+-            self.zs3[zs3_id]["global"]["zctrl_y"] = [processor_id, symbol]
++            saved_state["global"]["zctrl_y"] = [processor_id, symbol]
+         except:
+             pass
+         try:
+@@ -1719,14 +1714,16 @@
+                     "cvout_volts_octave": lib_zyncore.zynaptik_cvout_get_volts_octave(),
+                     "cvout_note0": lib_zyncore.zynaptik_cvout_get_note0()
+                 }
+-                self.zs3[zs3_id]["global"]["zynaptik"] = zynaptik_config
++                saved_state["global"]["zynaptik"] = zynaptik_config
+         except:
+             pass
+ 
++        # Commit only after every processor has successfully captured its state.
++        self.zs3[zs3_id] = saved_state
+         if zs3_id != 'zs3-0':
+             self.last_zs3_id = zs3_id
+             # Jofemodo: this has not sense from my POV
+-            #self.zs3['zs3-0'] = self.zs3[zs3_id].copy()
++            #self.zs3['zs3-0'] = saved_state.copy()
+         zynsigman.send(zynsigman.S_STATE_MAN, self.SS_SAVE_ZS3, zs3_id=zs3_id)
+ 
+     def delete_zs3(self, zs3_id):

@@ -16,7 +16,7 @@
 class LiveTests : public QObject {
     Q_OBJECT
     Model model;
-    Input input{model};
+    Input input;
     QWebEngineView view;
     QWebChannel channel;
     QJsonObject state() const { return QJsonDocument::fromJson(model.state().toUtf8()).object(); }
@@ -52,6 +52,8 @@ class LiveTests : public QObject {
 private slots:
     void initTestCase() {
         QVERIFY2(!qEnvironmentVariable("ZYNTHIAN_WEBVIEW_SOCKET").isEmpty(),"Run through runtime test session");
+        connect(&input, &Input::actionTriggered, &model, &Model::input);
+        connect(&input, &Input::statusChanged, &model, &Model::setInputStatus);
         qApp->installEventFilter(&input);
         channel.registerObject("zynthian",&model);view.page()->setWebChannel(&channel);
         view.resize(1280,800);view.show();

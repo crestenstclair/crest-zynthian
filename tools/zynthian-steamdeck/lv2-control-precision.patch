@@ -1,0 +1,19 @@
+diff --git a/zyngine/zynthian_engine_jalv.py b/zyngine/zynthian_engine_jalv.py
+--- a/zyngine/zynthian_engine_jalv.py
++++ b/zyngine/zynthian_engine_jalv.py
+@@ -952,13 +952,13 @@
+                 #logging.debug("set %d %s" % (zctrl.graph_path, zctrl.value))
+                 self.proc_cmd("set %d %s" % (zctrl.graph_path, zctrl.value))
+             else:
+-                self.proc_cmd("set %d %.6f" % (zctrl.graph_path, zctrl.value))
++                self.proc_cmd("set %d %.9g" % (zctrl.graph_path, zctrl.value))
+         else:
+             if zctrl.is_path:
+                 #logging.debug("%s=%s" % (zctrl.symbol, zctrl.value))
+                 self.proc_cmd("%s=%s" % (zctrl.symbol, zctrl.value))
+             else:
+-                self.proc_cmd("%s=%.6f" % (zctrl.symbol, zctrl.value))
++                self.proc_cmd("%s=%.9g" % (zctrl.symbol, zctrl.value))
+ 
+     # ---------------------------------------------------------------------------
+     # API methods

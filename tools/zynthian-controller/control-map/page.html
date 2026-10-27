@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Zynthian — Control mapping workbook</title>
+<!-- STYLE -->
+</head>
+<body>
+<header>
+  <a class="brand" href="#main">ZYNTHIAN <span>CONTROL WORKBOOK</span></a>
+  <div class="file-actions"><button id="load">Load JSON</button><button id="save" class="primary">Save JSON bundle ↓</button></div>
+  <input id="file" type="file" accept=".json,application/json" hidden>
+</header>
+<div id="notice" role="status" aria-live="polite">Your design, saved locally. No account or connection required.</div>
+<div class="workspace">
+  <aside aria-label="Screen selection">
+    <div class="side-heading">WHERE IT APPLIES</div>
+    <label class="search-label">Find a screen<input id="screen-search" type="search" placeholder="Mixer, piano roll, ZS3…"></label>
+    <nav id="contexts" aria-label="Screens"></nav>
+    <details class="add-form"><summary>Add a screen / mode</summary><form id="new-context"><label>Name<input name="label" maxlength="160" required placeholder="Piano roll · block selection"></label><button type="submit">Add mode</button></form></details>
+    <p class="side-note">Set defaults once. Add exceptions on individual screens. Custom modes can describe edit states, popovers or new screens.</p>
+  </aside>
+  <main id="main">
+    <div class="intro"><div class="eyebrow">MAKE THE CONTROLS YOURS</div><h1>What should each control do?</h1>
+    <p>Write in plain English. Current mappings are here as reference. Save the JSON and give it back to Codex to implement your choices.</p></div>
+    <details id="project" class="panel"><summary>Layout brief <span id="progress"></span></summary>
+      <div class="project-fields"><label>Bundle name<input id="title" maxlength="160"></label><label>Controller / hardware<input id="device" maxlength="160" placeholder="Steam Deck, Xbox pad, keyboard…"></label></div>
+      <label>Overall rules / goals<textarea id="brief" rows="2" maxlength="20000" placeholder="Describe the feel you want, modifier rules, handedness, and anything that should be consistent everywhere."></textarea></label>
+    </details>
+    <section class="mapping-section" aria-labelledby="context-title">
+      <div class="context-heading"><div><div class="eyebrow" id="context-kind">GLOBAL DEFAULTS</div><h2 id="context-title">Default / all screens</h2></div><span id="context-count" class="count"></span></div>
+      <p id="context-description"></p>
+      <details id="screen-rules"><summary>Rules for this screen <span class="optional">· optional</span></summary><label class="screen-notes-label">Rules for this screen<textarea id="context-notes" rows="2" maxlength="20000" placeholder="Focus order, navigation, selection, popovers, or rules shared by every control on this screen."></textarea></label></details>
+      <div class="filters"><label>Inputs<select id="device-filter"><option value="gamepad">Gamepad</option><option value="keyboard">Keyboard</option><option value="deck">Deck & touch</option><option value="custom">Custom</option><option value="all">All inputs</option></select></label>
+      <label class="control-search">Find a control<input id="control-search" type="search" placeholder="A, trigger, stick…"></label><label class="check"><input id="edited-only" type="checkbox">Edited only</label><button id="review">Review all decisions</button></div>
+      <div class="column-labels"><span>CONTROL & CURRENT MAPPING</span><span>YOUR BEHAVIOR</span></div>
+      <div id="controls"></div><p id="empty" hidden>No controls match these filters.</p>
+      <details class="add-form"><summary>Add a control / combination</summary><form id="new-control"><label>Name<input name="label" maxlength="160" required placeholder="L4 + D-pad, touchpad swipe, encoder…"></label><button type="submit">Add control</button></form></details>
+    </section>
+    <footer><p id="save-status" role="status">Draft not saved yet</p><p>Blank entries inherit the default. “Disable” explicitly means no action. JSON is a design specification; it does not change the running app by itself.</p><button id="reset" class="quiet">Start a new blank bundle</button></footer>
+  </main>
+</div>
+<dialog id="review-dialog"><div class="dialog-heading"><h2>Your decisions</h2><button id="close-review">Close</button></div><div id="review-content"></div></dialog>
+<dialog id="replace-dialog"><h2 id="replace-title">Replace the current draft?</h2><p id="replace-description"></p><p>You can download your current draft before continuing.</p><div class="dialog-actions"><button id="backup">Save current JSON</button><button id="cancel-replace">Cancel</button><button id="confirm-replace" class="primary">Replace draft</button></div></dialog>
+<noscript>This local worksheet needs JavaScript enabled to edit and save JSON.</noscript>
+<!-- SCRIPT -->
+</body></html>

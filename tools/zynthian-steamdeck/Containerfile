@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fontconfig fonts-dejavu-core xvfb xauth x11-utils sudo passwd procps less \
     iproute2 iputils-ping libnss-myhostname locales tzdata util-linux curl \
     && rm -rf /var/lib/apt/lists/*
-COPY build-runtime.sh sources.lock.json desktop-compat.patch requirements.txt /opt/zynthian-steamdeck/
+COPY build-runtime.sh sources.lock.json desktop-compat.patch lv2-state-recall.patch jalv-state-pause.patch lv2-control-precision.patch jalv-control-precision.patch lv2-snapshot-state.patch jalv-snapshot-state.patch jalv-latency-metadata.patch requirements.txt /opt/zynthian-steamdeck/
 RUN bash /opt/zynthian-steamdeck/build-runtime.sh
 # The stock engine registry imports websocket even when MOD-UI is disabled;
 # CairoSVG renders icons in the stock touchscreen keypad.

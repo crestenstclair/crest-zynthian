@@ -878,6 +878,8 @@ class zynthian_processor:
             "controllers": {},
             "current_screen_index": self.current_screen_index  # TODO: GUI
         }
+        if self.eng_code.startswith("JV/"):
+            state["lv2_state"] = self.engine.get_snapshot_state()
         # Get controller values
         for symbol in self.controllers_dict:
             state['controllers'][symbol] = self.controllers_dict[symbol].get_state()
@@ -918,7 +920,12 @@ class zynthian_processor:
         # Set preset
         if "preset_info" in state:
             try:
-                res = self.set_preset(state["preset_info"], force_set_engine=False)
+                # LV2 presets may contain opaque state that controller replay
+                # cannot reconstruct, even when the preset is already selected.
+                res = self.set_preset(
+                    state["preset_info"],
+                    force_set_engine=self.eng_code.startswith("JV/")
+                )
             except:
                 res = False
                 logging.exception(traceback.format_exc())
@@ -968,6 +975,15 @@ class zynthian_processor:
                         zctrl._configure()
                 except Exception as e:
                     logging.warning(f"Invalid controller for processor {self.get_basepath()}: {e}")
+
+        if "lv2_state" in state and self.eng_code.startswith("JV/"):
+            # Replay controller mappings first. Opaque state is authoritative;
+            # the Jalv acknowledgement follows all earlier queued controls.
+            try:
+                self.engine.restore_snapshot_state(state["lv2_state"])
+            except Exception:
+                self.set_state_flag = False
+                raise
 
         # Set current screen index
         if "current_screen_index" in state:

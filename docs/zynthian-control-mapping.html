@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><title>Zynthian — Control mapping workbook</title>
+<style>/* SPDX-License-Identifier: GPL-2.0-or-later */
+:root{color-scheme:dark;font:15px/1.5 system-ui,sans-serif;color:#e5e8e8;background:#111415;--muted:#a3b3b6;--line:#344043;--mint:#a9dbc4;--panel:#1b2225}
+*{box-sizing:border-box}[hidden]{display:none!important}body{margin:0}button,input,select,textarea{font:inherit}button,input,select,textarea,summary{touch-action:manipulation}button{cursor:pointer;border:1px solid #52616a;background:#303f47;color:#e5e8e8;border-radius:5px;padding:9px 13px}button:hover{background:#3d5159}button.primary{background:#a9dbc4;border-color:#a9dbc4;color:#10241c;font-weight:700}button.primary:hover{background:#c5efdd}button.quiet{background:transparent;color:var(--muted)}button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid #ffc269;outline-offset:3px}input,textarea,select{width:100%;color:inherit;background:#11191d;border:1px solid #536166;border-radius:5px;padding:9px 11px}textarea{resize:vertical;min-height:72px}input:focus,textarea:focus,select:focus{outline:2px solid var(--mint);outline-offset:1px}input::placeholder,textarea::placeholder{color:#819195}label{display:block;font-size:12px;font-weight:600;color:var(--muted)}label>input,label>textarea,label>select{margin-top:5px;font-size:14px;font-weight:400}header{min-height:78px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 28px;background:#191e20;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}.brand{color:inherit;text-decoration:none;font-size:21px;font-weight:800;letter-spacing:3px}.brand span{color:var(--muted);font-weight:400;font-size:11px;margin-left:12px;letter-spacing:2px}.file-actions{display:flex;gap:9px}#notice{padding:9px 28px;background:#1a2924;color:#c2decf;border-bottom:1px solid #34483e;font-size:12px}#notice.error{background:#3a2320;color:#ffd6ca}.workspace{display:grid;grid-template-columns:240px minmax(0,1fr);max-width:1700px;margin:auto}aside{background:#171c1e;border-right:1px solid var(--line);padding:24px 16px;position:sticky;top:78px;align-self:start;height:calc(100vh - 78px);display:flex;flex-direction:column}.side-heading,.eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;color:#b1c3c3}.side-heading{margin:0 4px 16px}.search-label{margin-bottom:14px}nav{min-height:150px;overflow:auto;flex:1;scrollbar-color:#59696a transparent}nav button{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;background:transparent;border-color:transparent;padding:10px 9px;font-size:13px;margin-bottom:3px}nav button[aria-current=true]{background:#253d38;border-color:#83c3af;color:#e7fff7}nav button[data-id=global]{font-weight:700}nav .badge{font-size:10px;background:#344b44;color:#d6ede3;padding:1px 6px;border-radius:8px;margin-left:8px}.side-note{font-size:11px;color:#93a8a6;margin-bottom:0}.add-form{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}summary{cursor:pointer;font-size:13px}.add-form form{padding-top:12px;display:grid;gap:10px}main{max-width:1230px;padding:30px 34px 50px;width:100%;min-width:0}.intro h1{font-size:clamp(25px,3vw,36px);letter-spacing:-1px;line-height:1.2;margin:9px 0 12px}.intro p{max-width:760px;color:var(--muted);margin:0 0 25px}.panel{background:var(--panel);padding:16px 18px;border:1px solid var(--line);border-radius:7px}.panel summary{font-weight:700;font-size:14px}.panel summary span{float:right;color:#a9dbc4;font-size:11px;font-weight:400}.project-fields{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin:16px 0 12px}.context-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:30px 0 0}h2{font-size:23px;line-height:1.25;margin:7px 0}.count{font-size:12px;color:var(--mint);white-space:nowrap}#context-description{font-size:13px;color:var(--muted);margin:5px 0 14px}.filters{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:20px 0 17px}.filters label:first-child{min-width:130px}.filters select{height:41px}.control-search{flex:1;min-width:160px}.check{display:flex;align-items:center;gap:6px;min-height:41px;white-space:nowrap}.check input{width:auto;margin:0}.filters button{font-size:12px;min-height:41px}.column-labels{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.4fr);gap:26px;font-size:10px;letter-spacing:1.4px;color:#95a9ab;border-bottom:1px solid var(--line);padding:0 14px 9px}.control-card{display:grid;grid-template-columns:minmax(180px,.8fr) minmax(0,1.4fr);gap:26px;padding:19px 14px;border-bottom:1px solid var(--line)}.control-card.changed{border-left:3px solid var(--mint);padding-left:11px;background:#17251f44}.control-card h3{font-size:17px;margin:0 0 7px}.control-card .group{font-size:10px;letter-spacing:1px;color:#8fa7a3;text-transform:uppercase;margin-bottom:6px}.current{font-size:12px;color:#b3c2c3;margin:0 0 6px}.current b{font-weight:500;color:#d8e1e0}.availability{font-size:11px;color:#90a2a6;margin:5px 0}.inherited{font-size:12px;color:#abd4bc;white-space:pre-wrap;margin:9px 0 0}.decision{display:flex;align-items:center;gap:10px;margin-bottom:8px}.decision label{flex:1}.decision select{font-size:12px;margin:0;padding:6px 8px}.input-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.behavior{font-size:14px;min-height:74px;width:100%;display:block}.advanced{margin-top:9px}.advanced summary{font-size:11px;color:#9fbbb2}.advanced-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.advanced-fields textarea{min-height:65px;font-size:12px}.advanced-fields label:last-child{grid-column:1/-1}.disabled-note{font-size:12px;color:#dfbd8b;margin:7px 0}.reset-row{font-size:11px;background:none;border:0;color:#a8babb;padding:5px 0}.reset-row:hover{color:#fff;background:none}#empty{padding:20px;background:var(--panel);color:var(--muted)}footer{border-top:1px solid var(--line);margin-top:30px;padding-top:16px;color:var(--muted);font-size:12px}#save-status{color:var(--mint)}footer p{max-width:850px}dialog{width:min(900px,calc(100vw - 30px));max-height:85vh;background:#1b2225;color:inherit;border:1px solid #637871;border-radius:9px;padding:24px;box-shadow:0 20px 90px #0009}dialog::backdrop{background:#07100dd6}.dialog-heading,.dialog-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}.dialog-heading{position:sticky;top:-24px;background:var(--panel);padding:10px 0;border-bottom:1px solid var(--line)}.dialog-actions{justify-content:flex-end;flex-wrap:wrap;margin-top:20px}.review-entry{padding:15px 0;border-bottom:1px solid var(--line)}.review-entry h3{font-size:16px;margin:0 0 8px}.review-entry p{white-space:pre-wrap;font-size:13px;margin:5px 0;color:#c7d5d1}.review-entry button{font-size:11px;margin-top:8px}.warning{color:#edc28f}.screen-note{white-space:pre-wrap}
+@media(min-width:1500px){main{padding-left:55px;padding-right:55px}}
+@media(max-width:900px){header{padding:12px 18px}.brand span{display:block;margin:3px 0 0;font-size:9px}.workspace{grid-template-columns:195px minmax(0,1fr)}aside{padding:20px 12px}main{padding:24px 20px}.control-card,.column-labels{grid-template-columns:minmax(125px,.7fr) minmax(0,1.3fr);gap:16px}.advanced-fields{grid-template-columns:1fr}.project-fields{grid-template-columns:1fr}.panel summary span{float:none;display:block;margin:5px 0 0}}
+@media(max-width:650px){header{position:static;flex-wrap:wrap}.brand span{display:inline;margin-left:9px}.file-actions{width:100%}.file-actions button{flex:1}#notice{padding:9px 16px}.workspace{display:block}aside{position:static;height:auto;padding:16px;border-right:0;border-bottom:1px solid var(--line)}nav{max-height:180px;min-height:0}nav button{font-size:12px}.side-heading,.side-note{display:none}aside .add-form{margin-top:8px}.intro h1{font-size:28px}main{padding:22px 16px}.control-card{grid-template-columns:1fr;gap:12px;padding:20px 8px}.control-card.changed{padding-left:5px}.column-labels{display:none}.context-heading{align-items:start}.count{white-space:normal}.control-search{min-width:120px}.dialog-actions{justify-content:start}dialog{padding:18px}}
+@media print{header,.file-actions,aside,.filters,.add-form,footer,button,#notice{display:none!important}.workspace{display:block}main{max-width:none}.control-card{break-inside:avoid}body{color:#000;background:#fff}}
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="#main">ZYNTHIAN <span>CONTROL WORKBOOK</span></a>
+  <div class="file-actions"><button id="load">Load JSON</button><button id="save" class="primary">Save JSON bundle ↓</button></div>
+  <input id="file" type="file" accept=".json,application/json" hidden>
+</header>
+<div id="notice" role="status" aria-live="polite">Your design, saved locally. No account or connection required.</div>
+<div class="workspace">
+  <aside aria-label="Screen selection">
+    <div class="side-heading">WHERE IT APPLIES</div>
+    <label class="search-label">Find a screen<input id="screen-search" type="search" placeholder="Mixer, piano roll, ZS3…"></label>
+    <nav id="contexts" aria-label="Screens"></nav>
+    <details class="add-form"><summary>Add a screen / mode</summary><form id="new-context"><label>Name<input name="label" maxlength="160" required placeholder="Piano roll · block selection"></label><button type="submit">Add mode</button></form></details>
+    <p class="side-note">Set defaults once. Add exceptions on individual screens. Custom modes can describe edit states, popovers or new screens.</p>
+  </aside>
+  <main id="main">
+    <div class="intro"><div class="eyebrow">MAKE THE CONTROLS YOURS</div><h1>What should each control do?</h1>
+    <p>Write in plain English. Current mappings are here as reference. Save the JSON and give it back to Codex to implement your choices.</p></div>
+    <details id="project" class="panel"><summary>Layout brief <span id="progress"></span></summary>
+      <div class="project-fields"><label>Bundle name<input id="title" maxlength="160"></label><label>Controller / hardware<input id="device" maxlength="160" placeholder="Steam Deck, Xbox pad, keyboard…"></label></div>
+      <label>Overall rules / goals<textarea id="brief" rows="2" maxlength="20000" placeholder="Describe the feel you want, modifier rules, handedness, and anything that should be consistent everywhere."></textarea></label>
+    </details>
+    <section class="mapping-section" aria-labelledby="context-title">
+      <div class="context-heading"><div><div class="eyebrow" id="context-kind">GLOBAL DEFAULTS</div><h2 id="context-title">Default / all screens</h2></div><span id="context-count" class="count"></span></div>
+      <p id="context-description"></p>
+      <details id="screen-rules"><summary>Rules for this screen <span class="optional">· optional</span></summary><label class="screen-notes-label">Rules for this screen<textarea id="context-notes" rows="2" maxlength="20000" placeholder="Focus order, navigation, selection, popovers, or rules shared by every control on this screen."></textarea></label></details>
+      <div class="filters"><label>Inputs<select id="device-filter"><option value="gamepad">Gamepad</option><option value="keyboard">Keyboard</option><option value="deck">Deck & touch</option><option value="custom">Custom</option><option value="all">All inputs</option></select></label>
+      <label class="control-search">Find a control<input id="control-search" type="search" placeholder="A, trigger, stick…"></label><label class="check"><input id="edited-only" type="checkbox">Edited only</label><button id="review">Review all decisions</button></div>
+      <div class="column-labels"><span>CONTROL & CURRENT MAPPING</span><span>YOUR BEHAVIOR</span></div>
+      <div id="controls"></div><p id="empty" hidden>No controls match these filters.</p>
+      <details class="add-form"><summary>Add a control / combination</summary><form id="new-control"><label>Name<input name="label" maxlength="160" required placeholder="L4 + D-pad, touchpad swipe, encoder…"></label><button type="submit">Add control</button></form></details>
+    </section>
+    <footer><p id="save-status" role="status">Draft not saved yet</p><p>Blank entries inherit the default. “Disable” explicitly means no action. JSON is a design specification; it does not change the running app by itself.</p><button id="reset" class="quiet">Start a new blank bundle</button></footer>
+  </main>
+</div>
+<dialog id="review-dialog"><div class="dialog-heading"><h2>Your decisions</h2><button id="close-review">Close</button></div><div id="review-content"></div></dialog>
+<dialog id="replace-dialog"><h2 id="replace-title">Replace the current draft?</h2><p id="replace-description"></p><p>You can download your current draft before continuing.</p><div class="dialog-actions"><button id="backup">Save current JSON</button><button id="cancel-replace">Cancel</button><button id="confirm-replace" class="primary">Replace draft</button></div></dialog>
+<noscript>This local worksheet needs JavaScript enabled to edit and save JSON.</noscript>
+<script type="module">const catalog = {"version":1,"repository":"crestenstclair/crest-zynthian","sourceCommit":"a8619a8e0787d483c0649b42340f261daae2d9d3","sourceFiles":["controller-node/web/input.mjs","controller-node/web/model.mjs","zynwebview/sequencer.py","zyngui/zynthian_gui.py"],"controls":[{"id":"pad:a","label":"A / South","group":"Face buttons","device":"gamepad","current":"Activate selected item / act on sequencer cell","shifted":"Activate selected item / act on sequencer cell","input":{"type":"button","index":0},"availability":"Standard browser gamepad input."},{"id":"pad:b","label":"B / East","group":"Face buttons","device":"gamepad","current":"Back / dismiss context menu","shifted":"Back / dismiss context menu","input":{"type":"button","index":1},"availability":"Standard browser gamepad input."},{"id":"pad:x","label":"X / West","group":"Face buttons","device":"gamepad","current":"Play / stop selected sequence","shifted":"Toggle note-editor recording","input":{"type":"button","index":2},"availability":"Standard browser gamepad input."},{"id":"pad:y","label":"Y / North","group":"Face buttons","device":"gamepad","current":"Selected item options / edit selected note or clip","shifted":"Toggle sequencer context menu","input":{"type":"button","index":3},"availability":"Standard browser gamepad input."},{"id":"pad:lb","label":"LB / L1","group":"Shoulders & triggers","device":"gamepad","current":"Hold for fine adjustment; LB + X records; LB + Y opens the sequencer menu","shifted":"","input":{"type":"button","index":4},"availability":"Standard browser gamepad input."},{"id":"pad:rb","label":"RB / R1","group":"Shoulders & triggers","device":"gamepad","current":"Snapshots","shifted":"Snapshots","input":{"type":"button","index":5},"availability":"Standard browser gamepad input."},{"id":"pad:lt","label":"LT / L2","group":"Shoulders & triggers","device":"gamepad","current":"Unassigned","shifted":"Unassigned","input":{"type":"button","index":6},"availability":"Standard browser gamepad input."},{"id":"pad:rt","label":"RT / R2","group":"Shoulders & triggers","device":"gamepad","current":"Unassigned","shifted":"Unassigned","input":{"type":"button","index":7},"availability":"Standard browser gamepad input."},{"id":"pad:view","label":"View / Select","group":"System buttons","device":"gamepad","current":"Mixer","shifted":"Mixer","input":{"type":"button","index":8},"availability":"Standard browser gamepad input."},{"id":"pad:start","label":"Menu / Start","group":"System buttons","device":"gamepad","current":"Main Menu","shifted":"Main Menu","input":{"type":"button","index":9},"availability":"Standard browser gamepad input."},{"id":"pad:l3","label":"Left stick click / L3","group":"Sticks","device":"gamepad","current":"Toggle sequencer canvas / context menu","shifted":"Toggle sequencer canvas / context menu","input":{"type":"button","index":10},"availability":"Standard browser gamepad input."},{"id":"pad:r3","label":"Right stick click / R3","group":"Sticks","device":"gamepad","current":"Block selection in the note editor","shifted":"Block selection in the note editor","input":{"type":"button","index":11},"availability":"Standard browser gamepad input."},{"id":"pad:up","label":"D-pad up","group":"D-pad","device":"gamepad","current":"Navigate up / move cursor up","shifted":"Navigate up / move cursor up","input":{"type":"button","index":12},"availability":"Standard browser gamepad input."},{"id":"pad:down","label":"D-pad down","group":"D-pad","device":"gamepad","current":"Navigate down / move cursor down","shifted":"Navigate down / move cursor down","input":{"type":"button","index":13},"availability":"Standard browser gamepad input."},{"id":"pad:left","label":"D-pad left","group":"D-pad","device":"gamepad","current":"Navigate left / decrease selected parameter","shifted":"Navigate left / decrease selected parameter","input":{"type":"button","index":14},"availability":"Standard browser gamepad input."},{"id":"pad:right","label":"D-pad right","group":"D-pad","device":"gamepad","current":"Navigate right / increase selected parameter","shifted":"Navigate right / increase selected parameter","input":{"type":"button","index":15},"availability":"Standard browser gamepad input."},{"id":"pad:guide","label":"Guide / Home button","group":"System buttons","device":"gamepad","current":"Unassigned","shifted":"Unassigned","input":{"type":"button","index":16},"availability":"Often reserved by the browser or OS."},{"id":"pad:left-left","label":"Left stick left","group":"Sticks","device":"gamepad","input":{"type":"axis","index":0,"direction":-1},"current":"Navigate left / decrease selected parameter","shifted":"Navigate left / decrease selected parameter","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:left-right","label":"Left stick right","group":"Sticks","device":"gamepad","input":{"type":"axis","index":0,"direction":1},"current":"Navigate right / increase selected parameter","shifted":"Navigate right / increase selected parameter","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:left-up","label":"Left stick up","group":"Sticks","device":"gamepad","input":{"type":"axis","index":1,"direction":-1},"current":"Navigate up / move cursor up","shifted":"Navigate up / move cursor up","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:left-down","label":"Left stick down","group":"Sticks","device":"gamepad","input":{"type":"axis","index":1,"direction":1},"current":"Navigate down / move cursor down","shifted":"Navigate down / move cursor down","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:right-left","label":"Right stick left","group":"Sticks","device":"gamepad","input":{"type":"axis","index":2,"direction":-1},"current":"Shorten note","shifted":"Shorten note","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:right-right","label":"Right stick right","group":"Sticks","device":"gamepad","input":{"type":"axis","index":2,"direction":1},"current":"Lengthen note","shifted":"Lengthen note","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:right-up","label":"Right stick up","group":"Sticks","device":"gamepad","input":{"type":"axis","index":3,"direction":-1},"current":"Raise note velocity / CC value","shifted":"Raise note velocity / CC value","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"pad:right-down","label":"Right stick down","group":"Sticks","device":"gamepad","input":{"type":"axis","index":3,"direction":1},"current":"Lower note velocity / CC value","shifted":"Lower note velocity / CC value","availability":"Digital direction above a 0.55 axis threshold; held directions repeat."},{"id":"key:ArrowUp","label":"ArrowUp","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"ArrowUp"},"current":"Navigate up / move cursor up","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:ArrowDown","label":"ArrowDown","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"ArrowDown"},"current":"Navigate down / move cursor down","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:ArrowLeft","label":"ArrowLeft","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"ArrowLeft"},"current":"Navigate left / decrease selected parameter","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:ArrowRight","label":"ArrowRight","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"ArrowRight"},"current":"Navigate right / increase selected parameter","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:PageUp","label":"PageUp","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"PageUp"},"current":"Previous page / move eight phrases or sixteen steps back","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:PageDown","label":"PageDown","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"PageDown"},"current":"Next page / move eight phrases or sixteen steps forward","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Enter","label":"Enter","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"Enter"},"current":"Activate selected item / act on sequencer cell","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Escape","label":"Escape","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"Escape"},"current":"Back / dismiss context menu","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Backspace","label":"Backspace","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"Backspace"},"current":"Back / dismiss context menu","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Home","label":"Home","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"Home"},"current":"Main Menu","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F2","label":"F2","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F2"},"current":"Mixer","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F3","label":"F3","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F3"},"current":"Snapshots","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F4","label":"F4","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F4"},"current":"Selected item options / edit selected note or clip","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F5","label":"F5","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F5"},"current":"Toggle sequencer context menu","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F6","label":"F6","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F6"},"current":"Clip launcher","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F7","label":"F7","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F7"},"current":"Block selection in the note editor","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Space","label":"Space","group":"Keyboard","device":"keyboard","input":{"type":"key","key":" "},"current":"Play / stop selected sequence","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:r","label":"r","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"r"},"current":"Toggle note-editor recording","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Tab","label":"Tab","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"Tab"},"current":"Toggle sequencer canvas / context menu","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Context toggle in sequencers; normal Tab navigation elsewhere."},{"id":"key:[","label":"[","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"["},"current":"Shorten note","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:]","label":"]","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"]"},"current":"Lengthen note","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:-","label":"-","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"-"},"current":"Lower note velocity / CC value","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:=","label":"=","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"="},"current":"Raise note velocity / CC value","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:F12","label":"F12","group":"Keyboard","device":"keyboard","input":{"type":"key","key":"F12"},"current":"All sounds off","shifted":"Shift gives fine adjustment where the action supports it.","availability":"Shortcuts do not intercept typing in text fields or browser modifier shortcuts."},{"id":"key:Shift","label":"Shift","group":"Keyboard","device":"keyboard","current":"Hold for fine parameter adjustment","shifted":"","availability":"Modifier; describe any alternate layers here."},{"id":"deck:l4","label":"L4 back button","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:l5","label":"L5 back button","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:r4","label":"R4 back button","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:r5","label":"R5 back button","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:left-pad","label":"Left trackpad / gestures","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:left-pad-click","label":"Left trackpad click","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:right-pad","label":"Right trackpad / gestures","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:right-pad-click","label":"Right trackpad click","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:touch","label":"Touchscreen / gestures","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:gyro","label":"Gyroscope / tilt","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:steam","label":"Steam button","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."},{"id":"deck:quick","label":"Quick Access / …","group":"Deck & touch","device":"deck","current":"No dedicated controller mapping","shifted":"","availability":"Describe your intent. Availability depends on Steam Input / host exposure; not verified on hardware."}],"contexts":[{"id":"global","label":"Default / all screens"},{"id":"add_chain","label":"Add Chain"},{"id":"admin","label":"Admin"},{"id":"audio_in","label":"Audio In"},{"id":"alsa_mixer","label":"Audio Levels"},{"id":"audio_out","label":"Audio Out"},{"id":"audio_player","label":"Audio Player"},{"id":"bank","label":"Bank"},{"id":"bluetooth","label":"Bluetooth"},{"id":"brightness_config","label":"Brightness Config"},{"id":"pated_cc","label":"CC editor"},{"id":"chain_control","label":"Chain Control"},{"id":"chain_manager","label":"Chain Manager"},{"id":"chain_options","label":"Chain Options"},{"id":"launcher","label":"Clip launcher"},{"id":"confirm","label":"Confirm"},{"id":"control","label":"Control"},{"id":"control_test","label":"Control Test"},{"id":"cv_config","label":"Cv Config"},{"id":"none","label":"Empty screen"},{"id":"engine","label":"Engine"},{"id":"file_selector","label":"File Selector"},{"id":"grid_sel","label":"Grid Sel"},{"id":"help","label":"Help"},{"id":"info","label":"Info"},{"id":"keyboard","label":"Keyboard"},{"id":"loading","label":"Loading"},{"id":"main_menu","label":"Main Menu"},{"id":"midi_cc","label":"Midi Cc"},{"id":"midi_cc_range","label":"Midi Cc Range"},{"id":"midi_cc_single","label":"Midi Cc Single"},{"id":"midi_chan","label":"Midi Chan"},{"id":"midi_config","label":"Midi Config"},{"id":"midi_key_range","label":"Midi Key Range"},{"id":"midi_recorder","label":"MIDI Player / Recorder"},{"id":"midi_profile","label":"Midi Profile"},{"id":"midi_prog","label":"Midi Prog"},{"id":"mixer","label":"Mixer"},{"id":"option","label":"Option"},{"id":"pattern_editor","label":"Piano roll"},{"id":"preset","label":"Preset"},{"id":"processor_options","label":"Processor Options"},{"id":"root","label":"Root / mixer alias"},{"id":"snapshot","label":"Snapshot"},{"id":"splash","label":"Splash"},{"id":"tempo","label":"Tempo"},{"id":"tts","label":"Text to speech"},{"id":"touchscreen_calibration","label":"Touchscreen Calibration"},{"id":"wifi","label":"Wifi"},{"id":"control_xy","label":"X/Y pad"},{"id":"zs3","label":"ZS3"},{"id":"zs3_options","label":"ZS3 options"}]};
+// SPDX-License-Identifier: GPL-2.0-or-later
+const FORMAT = 'crest-zynthian-control-map';
+const MAX_BYTES = 2 * 1024 * 1024;
+const BEHAVIOR_FIELDS = ['press','hold','doublePress','modifiers','repeat','notes'];
+
+function newBundle(catalog, now=new Date().toISOString()) {
+  return {format:FORMAT,schemaVersion:1,title:'My Zynthian controls',device:'',brief:'',createdAt:now,updatedAt:now,
+    reference:structuredClone(catalog),customControls:[],customContexts:[],contextNotes:{},assignments:[]};
+}
+function object(value, name) {
+  if (!value || typeof value!=='object' || Array.isArray(value)) throw Error(`${name} must be an object.`);
+  return value;
+}
+function text(value, name, maximum=10000) {
+  if (typeof value!=='string' || value.length>maximum) throw Error(`${name} must be text (${maximum} characters maximum).`);
+  return value;
+}
+function array(value, name, maximum) {
+  if (!Array.isArray(value) || value.length>maximum) throw Error(`${name} must be a list (${maximum} entries maximum).`);
+  return value;
+}
+function knownFields(value, names, name) {
+  object(value,name);
+  const unknown = Object.keys(value).find(key=>!names.includes(key));
+  if (unknown) throw Error(`Unknown ${name} field: ${unknown}. This file may need a newer editor.`);
+}
+function uniqueIds(entries, name) {
+  const ids = entries.map(entry=>text(entry.id,`${name} ID`,120));
+  if (new Set(ids).size!==ids.length) throw Error(`Duplicate ${name} IDs.`);
+  return new Set(ids);
+}
+function customEntries(entries, kind) {
+  array(entries,`Custom ${kind}`,50);
+  const result = entries.map(entry=>{
+    knownFields(entry,['id','label'],`custom ${kind}`);
+    if (!new RegExp(`^custom-${kind}:[a-zA-Z0-9-]+$`).test(entry.id)) throw Error(`Invalid custom ${kind} ID.`);
+    return {id:entry.id,label:text(entry.label,`Custom ${kind} name`,160)};
+  });
+  uniqueIds(result,`custom ${kind}`);
+  return result;
+}
+function checkReference(reference, catalog) {
+  object(reference,'Reference');
+  if (reference.version!==catalog.version || reference.repository!==catalog.repository) throw Error('This bundle uses a different control catalog.');
+  for (const kind of ['controls','contexts']) {
+    const actual = uniqueIds(array(reference[kind],kind,200),kind);
+    if (actual.size!==catalog[kind].length || catalog[kind].some(entry=>!actual.has(entry.id))) {
+      throw Error(`The bundle has different ${kind}. Keep the file and use its matching editor.`);
+    }
+  }
+}
+function parseAssignment(entry, controls, contexts) {
+  knownFields(entry,['control','context','decision',...BEHAVIOR_FIELDS],'assignment');
+  if (!controls.has(entry.control) || !contexts.has(entry.context)) throw Error('An assignment names an unknown control or screen.');
+  if (!['inherit','change','disable'].includes(entry.decision)) throw Error('Unknown assignment decision.');
+  const result = {control:entry.control,context:entry.context,decision:entry.decision};
+  for (const field of BEHAVIOR_FIELDS) result[field]=text(entry[field],field);
+  return result;
+}
+
+/** Validate imports atomically; reject unknown decisions instead of silently losing them. */
+function parseBundle(raw, catalog) {
+  if (typeof raw!=='string' || new TextEncoder().encode(raw).length>MAX_BYTES) throw Error('JSON bundle exceeds 2 MB.');
+  const value = JSON.parse(raw);
+  knownFields(value,['format','schemaVersion','title','device','brief','createdAt','updatedAt','reference',
+    'customControls','customContexts','contextNotes','assignments'],'bundle');
+  if (value.format!==FORMAT || value.schemaVersion!==1) throw Error('Choose a Zynthian control-map JSON bundle, version 1.');
+  checkReference(value.reference,catalog);
+  const customControls=customEntries(value.customControls,'control');
+  const customContexts=customEntries(value.customContexts,'context');
+  const controls=uniqueIds([...catalog.controls,...customControls],'control');
+  const contexts=uniqueIds([...catalog.contexts,...customContexts],'context');
+  const assignments=array(value.assignments,'Assignments',12000).map(entry=>parseAssignment(entry,controls,contexts));
+  const keys=assignments.map(entry=>`${entry.context}/${entry.control}`);
+  if (new Set(keys).size!==keys.length) throw Error('Duplicate assignment for the same control and screen.');
+  object(value.contextNotes,'Screen notes');
+  for (const [context,note] of Object.entries(value.contextNotes)) {
+    if (!contexts.has(context)) throw Error('Notes name an unknown screen.');
+    text(note,'Screen notes',20000);
+  }
+  return {format:FORMAT,schemaVersion:1,title:text(value.title,'Title',160),device:text(value.device,'Device',160),
+    brief:text(value.brief,'Brief',20000),createdAt:text(value.createdAt,'Creation time',60),updatedAt:text(value.updatedAt,'Update time',60),
+    reference:structuredClone(value.reference),customControls,customContexts,
+    contextNotes:{...value.contextNotes},assignments};
+}
+
+function emptyAssignment(context, control) {
+  return {context,control,decision:'inherit',...Object.fromEntries(BEHAVIOR_FIELDS.map(field=>[field,'']))};
+}
+function hasDecision(entry) {
+  return entry.decision!=='inherit' || BEHAVIOR_FIELDS.some(field=>entry[field].trim());
+}
+function setAssignment(bundle, entry) {
+  const index=bundle.assignments.findIndex(item=>item.context===entry.context && item.control===entry.control);
+  if (index>=0) bundle.assignments.splice(index,1);
+  if (hasDecision(entry)) bundle.assignments.push(entry);
+}
+function summarize(bundle) {
+  const changes=bundle.assignments.filter(entry=>entry.decision==='change');
+  return {decisions:bundle.assignments.length,
+    contexts:new Set([...bundle.assignments.map(entry=>entry.context),...Object.keys(bundle.contextNotes)]).size,
+    incomplete:changes.filter(entry=>!BEHAVIOR_FIELDS.slice(0,-1).some(field=>entry[field].trim())).length};
+}
+
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Bundled after bundle.mjs and the generated catalog; all user content is text.
+const STORAGE_KEY = 'crest-zynthian-control-workbook-v1';
+const el = id => document.getElementById(id);
+const fieldLabels = {press:'Press / primary gesture',hold:'Hold / long press',doublePress:'Double press',
+  modifiers:'Modifiers / combinations',repeat:'Repeat / sensitivity / feel',notes:'Notes / edge cases'};
+let bundle = newBundle(catalog);
+let context = 'global';
+let pendingReplacement = null;
+let storageBlocked = false;
+let recoveryText = '';
+let dirty = false;
+
+function element(tag, className, textContent) {
+  const item = document.createElement(tag);
+  if (className) item.className = className;
+  if (textContent !== undefined) item.textContent = textContent;
+  return item;
+}
+function message(text, error=false) {
+  el('notice').textContent = text;
+  el('notice').classList.toggle('error',error);
+  el('notice').setAttribute('role',error?'alert':'status');
+}
+function controls() {
+  return [...catalog.controls,...bundle.customControls.map(control=>({...control,device:'custom',group:'Custom',
+    current:'Custom input / combination',shifted:'',availability:'Describe how this input should be recognized.'}))];
+}
+function contexts() { return [...catalog.contexts,...bundle.customContexts]; }
+function assignment(controlId, contextId=context) {
+  return bundle.assignments.find(entry=>entry.context===contextId && entry.control===controlId) || emptyAssignment(contextId,controlId);
+}
+function contextLabel(id) { return contexts().find(item=>item.id===id)?.label || id; }
+function saveDraft() {
+  bundle.updatedAt = new Date().toISOString();
+  dirty = true;
+  updateProgress();
+  if (storageBlocked) return;
+  try {
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(bundle));
+    el('save-status').textContent = 'Draft saved in this browser. Download JSON to keep a portable copy.';
+  } catch {
+    storageBlocked = true;
+    el('save-status').textContent = 'Browser storage unavailable. Edits remain in this tab; save JSON before closing.';
+    message('Automatic draft saving is unavailable here. Use Save JSON bundle to keep your work.',true);
+  }
+}
+function updateProgress() {
+  const summary = summarize(bundle);
+  el('progress').textContent = `${summary.decisions} decisions · ${summary.contexts} scopes`;
+  const count = bundle.assignments.filter(entry=>entry.context===context).length;
+  el('context-count').textContent = `${count} decisions here`;
+  for (const button of el('contexts').querySelectorAll('button')) {
+    const total = bundle.assignments.filter(entry=>entry.context===button.dataset.id).length;
+    const badge = button.querySelector('.badge');
+    badge.textContent = total;
+    badge.hidden = total===0;
+  }
+}
+function renderContexts() {
+  const query = el('screen-search').value.toLowerCase();
+  const host = el('contexts');host.replaceChildren();
+  for (const item of contexts()) {
+    if (!`${item.label} ${item.id}`.toLowerCase().includes(query)) continue;
+    const button = element('button','',item.label);
+    button.dataset.id = item.id;
+    button.setAttribute('aria-current',String(item.id===context));
+    button.append(element('span','badge'));
+    button.onclick = () => selectContext(item.id);
+    host.append(button);
+  }
+  updateProgress();
+}
+function selectContext(id) {
+  context = id;
+  el('context-kind').textContent = id==='global' ? 'GLOBAL DEFAULTS' : 'SCREEN / MODE OVERRIDES';
+  el('context-title').textContent = contextLabel(id);
+  el('context-description').textContent = id==='global' ?
+    'Start here. These decisions apply everywhere unless you add an exception on a screen.' :
+    'Only describe exceptions here. Unchanged controls inherit your default decisions. Current behavior depends on the selected item and editor mode.';
+  el('context-notes').value = bundle.contextNotes[id] || '';
+  renderContexts();renderControls();
+}
+function decisionSelect(entry, onChange) {
+  const select = document.createElement('select');
+  select.setAttribute('aria-label',`Decision for ${entry.control}`);
+  const choices = [['inherit',context==='global'?'Keep current behavior':'Use default behavior'],['change','Change behavior'],['disable','Disable this control']];
+  for (const [value,label] of choices) {
+    const option = element('option','',label);option.value=value;select.append(option);
+  }
+  select.value = entry.decision;
+  select.onchange = () => onChange(select.value);
+  return select;
+}
+function behaviorField(field, entry, control, onInput) {
+  const label = element('label',field==='press'?'input-label':'',fieldLabels[field]);
+  const input = document.createElement('textarea');
+  input.value = entry[field];input.rows = 2;input.maxLength = 10000;
+  input.dataset.field = field;input.setAttribute('aria-label',`${control.label} — ${fieldLabels[field]}`);
+  input.className = field==='press'?'behavior':'';
+  input.placeholder = field==='press'?'What should happen? Describe the action in your own words.':
+    field==='modifiers'?'e.g. Hold LB + this control to…':field==='notes'?'Special cases, questions, examples…':'Describe if needed…';
+  input.addEventListener('input',()=>onInput(field,input.value));
+  if (field==='press') {label.htmlFor=`press-${control.id}`;input.id=label.htmlFor;return [label,input];}
+  label.append(input);return [label];
+}
+function referenceColumn(control) {
+  const column = element('div','reference');
+  column.append(element('div','group',control.group),element('h3','',control.label),
+    element('p','current',`Current: ${control.current}`));
+  if (control.device==='gamepad' && control.shifted && control.shifted!==control.current) column.append(element('p','current',`With LB: ${control.shifted}`));
+  column.append(element('p','availability',control.availability));
+  if (context!=='global') {
+    const inherited = assignment(control.id,'global');
+    if (inherited.decision==='disable') column.append(element('p','inherited','Your default: disabled'));
+    if (inherited.decision==='change') column.append(element('p','inherited',`Your default: ${inherited.press || inherited.hold || inherited.modifiers || 'See default details'}`));
+  }
+  return column;
+}
+function controlCard(control) {
+  const card = element('article','control-card');card.dataset.control=control.id;
+  const entry = {...assignment(control.id)};
+  const editor = element('div','behavior-fields');
+  const decisionRow = element('div','decision');
+  const disabled = element('p','disabled-note','No action in this scope. Existing descriptions are retained as notes.');
+  const select = decisionSelect(entry,value=>{entry.decision=value;changed();});
+  function changed() {
+    setAssignment(bundle,entry);card.classList.toggle('changed',hasDecision(entry));
+    disabled.hidden=entry.decision!=='disable';saveDraft();
+  }
+  function edit(field,value) {
+    entry[field]=value;
+    if (field!=='notes' && value.trim() && entry.decision==='inherit') {entry.decision='change';select.value='change';}
+    changed();
+  }
+  decisionRow.append(select);
+  editor.append(decisionRow,...behaviorField('press',entry,control,edit));
+  const advanced = element('details','advanced');advanced.append(element('summary','','Hold, double press, modifiers & notes'));
+  const fields = element('div','advanced-fields');
+  for (const field of BEHAVIOR_FIELDS.slice(1)) fields.append(...behaviorField(field,entry,control,edit));
+  advanced.append(fields);editor.append(disabled,advanced);
+  card.classList.toggle('changed',hasDecision(entry));disabled.hidden=entry.decision!=='disable';
+  card.append(referenceColumn(control),editor);return card;
+}
+function renderControls() {
+  const device = el('device-filter').value, query = el('control-search').value.toLowerCase();
+  const host = el('controls');host.replaceChildren();
+  const matches = controls().filter(control=>(device==='all'||control.device===device) &&
+    `${control.label} ${control.group}`.toLowerCase().includes(query) && (!el('edited-only').checked || hasDecision(assignment(control.id))));
+  for (const control of matches) host.append(controlCard(control));
+  el('empty').hidden = matches.length>0;
+}
+function renderProject() {
+  for (const field of ['title','device','brief']) el(field).value = bundle[field];
+  selectContext('global');
+}
+function download(text, filename) {
+  const url=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download=filename;
+  document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportBundle() {
+  try {
+    const validated = parseBundle(JSON.stringify(bundle),catalog);
+    const name = validated.title.trim().replace(/[^a-zA-Z0-9_-]+/g,'-').slice(0,70) || 'zynthian-controls';
+    download(JSON.stringify(validated,null,2)+'\n',`${name}.json`);
+    message('JSON download requested. Keep this file and give it back to Codex when you are ready.');
+  } catch(error) {message(error.message,true);}
+}
+function requestReplacement(next, description) {
+  pendingReplacement = next;
+  el('replace-description').textContent = description;
+  el('replace-dialog').showModal();
+}
+function replaceDraft() {
+  if (!pendingReplacement) return;
+  bundle=pendingReplacement;pendingReplacement=null;storageBlocked=false;recoveryText='';
+  el('replace-dialog').close();el('edited-only').checked=false;el('control-search').value='';el('screen-search').value='';
+  renderProject();saveDraft();message('Draft loaded. Your imported descriptions are ready to edit.');
+}
+async function importBundle(file) {
+  if (!file) return;
+  try {
+    if (file.size>MAX_BYTES) throw Error('JSON bundle exceeds 2 MB.');
+    const next = parseBundle(await file.text(),catalog);
+    requestReplacement(next,`Load “${next.title}” with ${next.assignments.length} decisions? Your current draft will be replaced.`);
+  } catch(error) {message(`Import failed: ${error.message} Your current draft was kept.`,true);}
+  finally {el('file').value='';}
+}
+function addCustom(form, kind) {
+  const label = new FormData(form).get('label').trim();
+  if (!label) return;
+  const item = {id:`custom-${kind}:${crypto.randomUUID()}`,label};
+  const list = kind==='context'?bundle.customContexts:bundle.customControls;
+  if (list.length>=50) {message('This bundle already has 50 custom entries of this type.',true);return;}
+  list.push(item);form.reset();saveDraft();
+  if (kind==='context') {el('screen-search').value='';selectContext(item.id);}
+  else {el('device-filter').value='custom';el('control-search').value='';el('edited-only').checked=false;renderControls();}
+}
+function reviewAssignment(entry) {
+  const control = controls().find(item=>item.id===entry.control);
+  const section = element('section','review-entry');
+  section.append(element('h3','',`${contextLabel(entry.context)} · ${control.label}`));
+  section.append(element('p','',entry.decision==='disable'?'Disabled':entry.decision==='change'?'Change behavior':'Inherit behavior; notes only'));
+  for (const field of BEHAVIOR_FIELDS) if (entry[field]) section.append(element('p','',`${fieldLabels[field]}: ${entry[field]}`));
+  const button=element('button','','Edit this decision');
+  button.onclick=()=>{
+    el('review-dialog').close();el('device-filter').value='all';el('edited-only').checked=false;
+    el('control-search').value=control.label;selectContext(entry.context);el('controls').querySelector('textarea')?.focus();
+  };
+  section.append(button);return section;
+}
+function review() {
+  const host=el('review-content');host.replaceChildren();
+  const stats=summarize(bundle);
+  host.append(element('p','',`${stats.decisions} control decisions across ${stats.contexts} scopes. All are included in the JSON.`));
+  if (stats.incomplete) host.append(element('p','warning',`${stats.incomplete} changes still need a behavior description. You can save unfinished work.`));
+  if (bundle.brief) host.append(element('p','screen-note',`Layout brief: ${bundle.brief}`));
+  for (const [id,note] of Object.entries(bundle.contextNotes)) host.append(element('p','screen-note',`${contextLabel(id)} — ${note}`));
+  for (const entry of bundle.assignments) host.append(reviewAssignment(entry));
+  el('review-dialog').showModal();
+}
+function restoreDraft() {
+  try {
+    recoveryText=localStorage.getItem(STORAGE_KEY) || '';
+    if (recoveryText) {
+      bundle=parseBundle(recoveryText,catalog);recoveryText='';
+      el('save-status').textContent='Previous local draft restored. Download JSON for a portable copy.';
+      message('Your previous draft has been restored.');
+    }
+  } catch(error) {
+    storageBlocked=true;
+    message(`Stored draft could not be loaded: ${error.message} It has been left untouched.`,true);
+    el('save-status').textContent='Local draft storage paused. Save JSON for this session; starting a new bundle offers recovery of the stored file.';
+  }
+}
+
+for (const field of ['title','device','brief']) el(field).addEventListener('input',()=>{bundle[field]=el(field).value;saveDraft();});
+el('context-notes').oninput=()=>{
+  const value=el('context-notes').value;
+  if (value) bundle.contextNotes[context]=value;else delete bundle.contextNotes[context];saveDraft();
+};
+el('screen-search').oninput=renderContexts;
+el('control-search').oninput=renderControls;
+el('device-filter').onchange=renderControls;
+el('edited-only').onchange=renderControls;
+el('save').onclick=exportBundle;
+el('load').onclick=()=>el('file').click();
+el('file').onchange=()=>importBundle(el('file').files[0]);
+el('review').onclick=review;
+el('close-review').onclick=()=>el('review-dialog').close();
+el('reset').onclick=()=>requestReplacement(newBundle(catalog),'Start a blank workbook? This replaces the current local draft; downloaded JSON files are kept.');
+el('backup').onclick=()=>recoveryText ? download(recoveryText,'zynthian-stored-draft-recovery.json') : exportBundle();
+el('cancel-replace').onclick=()=>{pendingReplacement=null;el('replace-dialog').close();};
+el('confirm-replace').onclick=replaceDraft;
+el('new-control').onsubmit=event=>{event.preventDefault();addCustom(event.currentTarget,'control');};
+el('new-context').onsubmit=event=>{event.preventDefault();addCustom(event.currentTarget,'context');};
+window.addEventListener('beforeunload',event=>{if (dirty && storageBlocked) {event.preventDefault();event.returnValue='';}});
+restoreDraft();renderProject();
+</script>
+</body></html>

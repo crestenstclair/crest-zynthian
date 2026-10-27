@@ -17,11 +17,20 @@ for name, source in lock.items():
     head=subprocess.check_output(['git','-C',str(dest),'rev-parse','HEAD'],text=True).strip()
     if head!=source['commit']: raise SystemExit(f'{name}: wrong checkout {head}')
 PY
-if git -C "$root/zynthian-ui" apply --check "$here/desktop-compat.patch"; then
-    git -C "$root/zynthian-ui" apply "$here/desktop-compat.patch"
-else
-    git -C "$root/zynthian-ui" apply --reverse --check "$here/desktop-compat.patch"
-fi
+for patch in desktop-compat.patch lv2-state-recall.patch lv2-control-precision.patch lv2-snapshot-state.patch; do
+    if git -C "$root/zynthian-ui" apply --check "$here/$patch"; then
+        git -C "$root/zynthian-ui" apply "$here/$patch"
+    else
+        git -C "$root/zynthian-ui" apply --reverse --check "$here/$patch"
+    fi
+done
+for patch in jalv-state-pause.patch jalv-control-precision.patch jalv-snapshot-state.patch jalv-latency-metadata.patch; do
+    if git -C "$root/sw/jalv" apply --check "$here/$patch"; then
+        git -C "$root/sw/jalv" apply "$here/$patch"
+    else
+        git -C "$root/sw/jalv" apply --reverse --check "$here/$patch"
+    fi
+done
 cmake -S "$root/sw/libsndfile" -B "$root/sw/libsndfile/build" \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$root" \
   -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF -DBUILD_PROGRAMS=OFF -DBUILD_EXAMPLES=OFF

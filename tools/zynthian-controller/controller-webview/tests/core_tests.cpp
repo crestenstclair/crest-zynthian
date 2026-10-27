@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "input.hpp"
 #include "model.hpp"
+#include "host.hpp"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QKeyEvent>
 #include <QLocalServer>
 #include <QSignalSpy>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest>
 #include <cerrno>
@@ -22,6 +24,64 @@ static bool unixSocketsDenied() {
 class CoreTests : public QObject {
     Q_OBJECT
 private slots:
+    void nativeHostRejectsUntrustedEndpoints() {
+        QVERIFY(HostPage::isLocalEndpoint(QUrl("http://localhost:8766/")));
+        QVERIFY(HostPage::isLocalEndpoint(QUrl("http://127.0.0.1:8766/#token=example")));
+        for (const auto& address : {"https://example.com/", "http://localhost.evil/", "file:///tmp/test.html",
+                                    "http://user:pass@localhost:8766/", "http://localhost:8766/?token=secret",
+                                    "http://localhost:8766/other"})
+            QVERIFY2(!HostPage::isLocalEndpoint(QUrl(address)), address);
+    }
+
+    void nativeControllerActionsAndFocus() {
+        Input input;
+        SDL_VirtualJoystickDesc descriptor{};
+        descriptor.version = SDL_VIRTUAL_JOYSTICK_DESC_VERSION;
+        descriptor.type = SDL_JOYSTICK_TYPE_GAMECONTROLLER;
+        descriptor.naxes = SDL_CONTROLLER_AXIS_MAX;
+        descriptor.nbuttons = SDL_CONTROLLER_BUTTON_MAX;
+        descriptor.name = "Zynthian test gamepad";
+        const int index = SDL_JoystickAttachVirtualEx(&descriptor);
+        QVERIFY2(index >= 0, SDL_GetError());
+        auto* joystick = SDL_JoystickOpen(index);
+        QVERIFY(joystick);
+        const auto cleanup = qScopeGuard([&] { SDL_JoystickClose(joystick); SDL_JoystickDetachVirtual(index); });
+        QTRY_VERIFY(input.status().contains("Zynthian test gamepad"));
+        QTest::qWait(30); // One neutral sample arms a newly attached device.
+        QSignalSpy actions(&input, &Input::actionTriggered);
+        const auto button = [&](SDL_GameControllerButton key, bool down) {
+            QCOMPARE(SDL_JoystickSetVirtualButton(joystick, key, down), 0);
+        };
+        button(SDL_CONTROLLER_BUTTON_DPAD_RIGHT, true);
+        QTRY_VERIFY(!actions.isEmpty());
+        QCOMPARE(actions.first().at(0).toString(), QString("right"));
+        QTRY_VERIFY_WITH_TIMEOUT(actions.size() >= 2, 1000);
+        button(SDL_CONTROLLER_BUTTON_DPAD_RIGHT, false);
+        QTest::qWait(30);
+        actions.clear();
+        button(SDL_CONTROLLER_BUTTON_A, true);
+        QTRY_COMPARE(actions.size(), 1);
+        QCOMPARE(actions.first().at(0).toString(), QString("select"));
+        QTest::qWait(450);
+        QCOMPARE(actions.size(), 1); // Activation never repeats.
+        button(SDL_CONTROLLER_BUTTON_A, false);
+        QTest::qWait(30);
+        actions.clear();
+        input.setActive(false);
+        button(SDL_CONTROLLER_BUTTON_DPAD_DOWN, true);
+        QTest::qWait(30);
+        input.setActive(true);
+        QTest::qWait(400);
+        QVERIFY(actions.isEmpty()); // Held input cannot activate on refocus.
+        button(SDL_CONTROLLER_BUTTON_DPAD_DOWN, false);
+        QTest::qWait(30);
+        button(SDL_CONTROLLER_BUTTON_LEFTSHOULDER, true);
+        button(SDL_CONTROLLER_BUTTON_X, true);
+        QTRY_COMPARE(actions.size(), 1);
+        QCOMPARE(actions.first().at(0).toString(), QString("record"));
+        QVERIFY(actions.first().at(1).toBool());
+    }
+
     void sequencerFocusSurvivesUpdatesAndResetsOnScreenChange() {
         Model model;
         QJsonObject state{{"protocol", 1}, {"screen", "pattern_editor"}, {"kind", "sequencer"}, {"revision", "a"},
@@ -171,7 +231,9 @@ private slots:
             QSKIP("Local sockets are denied by this environment");
         QVERIFY(server.listen(dir.filePath("bridge.sock")));
         Model model;
-        Input input(model);
+        Input input;
+        connect(&input, &Input::actionTriggered, &model, &Model::input);
+        connect(&input, &Input::statusChanged, &model, &Model::setInputStatus);
         QObject target;
         target.installEventFilter(&input);
         QSignalSpy commands(&model, &Model::commandIssued);

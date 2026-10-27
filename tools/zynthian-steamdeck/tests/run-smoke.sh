@@ -9,6 +9,10 @@ backend=${1:-jack}
 export ZYNTHIAN_TEST_BACKEND=$backend
 export TEST_OUTPUT="$TEST_OUTPUT/$backend"
 source "$here/environment.sh"
+python3 "$here/tests/processor-state.py" "$ZYNTHIAN_UI_DIR/zyngine/zynthian_processor.py"
+python3 "$here/tests/lv2-snapshot-state.py" "$ZYNTHIAN_UI_DIR/zyngine/zynthian_lv2_state.py"
+python3 "$here/tests/zs3-state.py" "$ZYNTHIAN_UI_DIR/zyngine/zynthian_state_manager.py"
+python3 "$here/tests/jalv-control-values.py" "$ZYNTHIAN_UI_DIR/zyngine/zynthian_engine_jalv.py"
 export ZYNTHIAN_UI_RESTORE_LAST_STATE=0
 mkdir -p "$TEST_OUTPUT" "$HOME"
 python3 "$here/prepare-user.py"
@@ -41,6 +45,8 @@ for _ in {1..50}; do
     sleep 0.1
 done
 [[ $ready == 1 ]] || { cat "$TEST_OUTPUT/$backend.log"; exit 1; }
+"${runner[@]}" python3 "$here/tests/jalv-state-check.py" "$(command -v jalv)" "$TEST_OUTPUT/state-guard"
+"${runner[@]}" python3 "$here/tests/jalv-latency-check.py" "$(command -v jalv)" "$TEST_OUTPUT/latency-probe"
 if [[ $backend == pipewire ]]; then
     PIPEWIRE_PROPS='{ node.name = zynthian-test-output media.class = Audio/Sink node.always-process = true }' \
         pw-jack python3 "$here/tests/pipewire-device.py" >"$TEST_OUTPUT/device.log" 2>&1 &

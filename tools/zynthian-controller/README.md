@@ -6,8 +6,9 @@ reference is the [offline controller manual](../../docs/zynthian-controller-manu
 including its 52 embedded screenshots. The [sequencer previews](../../docs/zynthian-sequencer-mockups.html)
 remain available offline.
 
-The visible application is Node.js and HTML, using the manual's supplied
-HTML/CSS style. Menus, parameters, routing, mixer, players, settings, snapshots,
+The desktop application is a C++ / Qt WebEngine host with native SDL2 controller
+input. It embeds the shared Node/HTML frontend using the manual's supplied
+HTML/CSS style. The browser version retains Gamepad API support. Menus, parameters, routing, mixer, players, settings, snapshots,
 launcher, piano roll and CC editing are browser controls. The browser does not
 display a streamed Python window. Keyboard and standard browser gamepads drive
 the same interface as touch and mouse.
@@ -21,12 +22,22 @@ engine/backend. See the [screen map](controller-node/SCREEN-COVERAGE.md) for all
 
 ## Run on this Mac or Linux desktop
 
-Start Docker, then from the repository root:
+For a physical Raspberry Pi with Pisound, see the
+[Pi trial guide](runtime/RASPBERRY-PI.md). It uses this same HTML controller with
+ALSA audio/MIDI and SSH browser access, while keeping the existing OS and data.
+
+Start Docker. Install Qt WebEngine, Qt WebChannel, SDL2, CMake and pkg-config on
+the desktop host (see the [native host guide](controller-webview/README.md)), then
+from the repository root:
 
 ```sh
 bash tools/zynthian-controller/zynthian-controller build
 bash tools/zynthian-controller/zynthian-controller open
 ```
+
+`open` builds and launches the native C++ app. Use `host-build` to build only the
+host, or `browser` to open the shared frontend in Safari on this Mac. Close the
+previous controller window when switching; the backend accepts one at a time.
 
 The build uses the already installed `localhost/zynthian-web:oram` image for
 system dependencies, engines and factory data. It installs the Node transport
@@ -61,6 +72,15 @@ at a time. Reopen the printed URL if a new tab has no access token.
 
 ## Controls
 
+Use the [offline control-mapping workbook](../../docs/zynthian-control-mapping.html)
+to specify your preferred controls. It lists 62 gamepad, keyboard and Deck/touch
+inputs, global defaults and all 51 registered screens. Add custom controls or
+screen modes, describe press/hold/modifier behavior in plain English, then choose
+**Save JSON bundle**. Load JSON reopens the design for editing; a browser-local
+draft is saved automatically where storage is available. This is a design
+handoff for implementation, not a live runtime configuration loader. See the
+[workbook format and source](control-map/README.md).
+
 The manual defines the mappings. Arrows / D-pad navigate, Enter / A selects,
 Esc / B goes back, Home / Start opens Main Menu, F2 opens Mixer, F3 opens
 Snapshots, and F6 opens the launcher. In editors, Space / X plays, F4 / Y edits,
@@ -68,12 +88,17 @@ Tab / left-stick click opens the context menu, and Shift / LB gives fine changes
 Right stick changes note length and velocity; F7 / right-stick click selects a
 block. Visible Options buttons expose per-item actions; More screens opens the
 remaining navigation routes. Parameter rows have minus/plus and numeric entry.
-Controller layout remains provisional. Physical gamepad validation is outstanding.
+Controller layout remains provisional. The native status line identifies devices
+read by SDL; browser previews use the browser Gamepad API. Physical mapping
+validation is separate from virtual-controller regression tests.
 
 ## Sessions and updates
 
 Save work with **Snapshots**. Instrument state and native sequencer events use
 Zynthian's existing snapshot files. There is no separate controller project.
+LV2 snapshots also embed unsaved plugin state and Lilv-managed resources without
+creating a user preset. Rebuild the matching base runtime so Jalv provides the
+state commands used by this backend. See the [runtime state behavior and limits](../zynthian-steamdeck/README.md#audio-and-persistence).
 
 Host data defaults to:
 
@@ -125,7 +150,8 @@ those devices to Docker. Desktop VM checks do not establish physical
 Steam Deck/Pi/USB operation, real-time latency or thermal performance.
 Raspberry Pi hardware testing remains deferred.
 
-The supplied C++/Qt host remains in `controller-webview/` as optional source. The
-current launcher and validation use Node/HTML; they do not build or run Qt.
+The C++/Qt desktop host is in `controller-webview/`; `open` builds and launches
+it. Its native controller tests complement the existing Node/HTML backend and
+screen tests. See the [native host guide](controller-webview/README.md).
 
 All supplied license notices are retained; see [LICENSE.txt](LICENSE.txt).

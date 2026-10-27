@@ -1,189 +1,126 @@
-# Zynthian controller webview
+# C++ controller web host
 
-The current desktop runtime uses **Node/HTML**. Start with the
-[parent guide](../README.md), [screen map](../controller-node/SCREEN-COVERAGE.md)
-and [validation record](../runtime/VALIDATION.md). This directory retains the
-optional supplied C++ host; the current runtime does not build or launch it.
-The build and screen descriptions below document that earlier host.
+The desktop application uses **C++ / Qt 6 WebEngine with SDL2 controller input**.
+It embeds the current HTML frontend from the local Node server. The same frontend
+also works in a browser using the browser Gamepad API. Both input sources drive
+the same JavaScript action model, screen navigation and backend commands.
 
-An experimental C++ / Qt 6 WebEngine frontend for this Zynthian fork. Qt
-WebChannel connects the embedded HTML interface to C++; SDL2 reads gamepads.
-An opt-in local adapter exposes the **existing running Zynthian application**.
-Engine discovery, hosting, presets, MIDI, audio, snapshots and state remain
-Zynthian's responsibility. The frontend has no audio engine or audio dependency.
+Zynthian's existing Python backend, native engines, MIDI router, mixer, sequencer
+and session storage remain in place. This host does not replace their algorithms.
+The stock Steam Deck runtime remains separate.
 
-This work is independent of Crest Synth and Crest Tracker. It imports no code
-from either project. There is no separate FluidSynth backend. Upstream Zynthian's
-own FluidSynth engine remains available normally, alongside its other engines.
+## Build and launch
 
-## Current implementation
+On this Mac, install native dependencies through Homebrew:
 
-Menus are read from live Zynthian screens, rather than copied into a fixed engine
-catalog. Selection invokes the original screen's selection callback with its
-original arguments. Native controllers receive `nudge()` / `toggle()` calls,
-including logarithmic, enumerated and fine adjustment behavior.
+```sh
+brew install cmake pkg-config qtwebengine qtwebchannel sdl2
+bash tools/zynthian-controller/zynthian-controller host-build
+bash tools/zynthian-controller/zynthian-controller open
+```
 
-| Surface | Adapter implementation |
-| --- | --- |
-| Main menu / Add Chain / grid menus | Live titles, availability and original callbacks |
-| Engine / bank / preset selectors | Original list data, selection and bold actions |
-| Chain Manager | Flattened graph nodes, original node selection and actions |
-| Parameters | Current page's native controllers plus page selection |
-| Mixer | Chain options, level, balance, mute and solo from native controllers |
-| Snapshots / ZS3 / Admin / routing selectors | Existing selector callbacks and confirmation flow |
-| Confirmation / keyboard | Cancel-first confirmation; controller-accessible character grid |
-| Composite Chain Control | Active embedded controls/selector, processors and routing tabs |
-| Clip launcher | Native chain/phrase grid, launch/stop, edit clips, status and repeats |
-| Phrase arrangement | Native repeat/follow/tempo menus, insert/clone/move/delete and clipboard |
-| Piano roll | Native keymap, sustained notes, cursor/playhead, velocity lane, note edits and block operations |
-| CC automation | Native events, value editing, CC selection and interpolation options |
-| Sequencer transport | Existing playback, stop-all, MIDI record, tempo, undo and redo |
-| Engine-specific graphics / XY / range editors | Not ported; explicit message with navigation available |
+`open` starts the existing controller runtime and opens the native application.
+It incrementally builds the host, without rebuilding or replacing the backend
+container. Docker must be running. The first backend installation still uses
+`zynthian-controller build`; see the [runtime guide](../README.md).
 
-The Python/Tk application still runs underneath this frontend. This is a
-presentation and controller-navigation port, **not a C++ rewrite of Zynthian's
-application logic**, nor a standalone replacement for its runtime. Tk is not
-hidden or disabled. A later phase can decouple individual screens from Tk.
+The macOS app bundle is `build/controller-webview/zynthian-controller.app` at the
+repository root. It can also be opened directly while the backend is running.
+The host reads the existing `access-token` from the controller data directory;
+credentials are not embedded in the binary or command line. Set
+`ZYNTHIAN_CONTROLLER_DATA` to use an existing alternative data directory.
 
-## Build on Debian / Ubuntu
-
-Required: CMake 3.22+, C++20 compiler, Qt 6.4+ (Core, Gui, Network, Widgets,
-WebEngineWidgets, WebChannel), SDL2. Qt Test and Python 3 are needed for tests.
+For Debian / Ubuntu dependencies:
 
 ```sh
 sudo apt install build-essential cmake pkg-config qt6-base-dev qt6-webengine-dev qt6-webchannel-dev libsdl2-dev
-cmake -S controller-webview -B controller-webview/build -DCMAKE_BUILD_TYPE=Release
-cmake --build controller-webview/build -j4
-ctest --test-dir controller-webview/build --output-on-failure
 ```
 
-Run the frontend as your normal user. Chromium sandboxing is left enabled.
-The build does not fetch dependencies or change the system's audio setup.
+The host requires CMake 3.22+, C++20, Qt 6.4+ and SDL2 2.24+. Qt Test and Python 3
+are used by the existing regression suite. On Linux the native executable is
+`build/controller-webview/zynthian-controller`.
 
-## Connect to a working Zynthian installation
-
-Use the **same operating-system user** for Zynthian and this frontend. From the
-environment in which this fork's `zynthian_main.py` already runs successfully:
+Optional native arguments:
 
 ```sh
-install -d -m 700 "$XDG_RUNTIME_DIR/zynthian-webview"
-export ZYNTHIAN_WEBVIEW_SOCKET="$XDG_RUNTIME_DIR/zynthian-webview/control.sock"
-python3 zynthian_main.py
+build/controller-webview/zynthian-controller --url http://localhost:8766/ \
+  --token-file /absolute/path/to/access-token --fullscreen
 ```
 
-In a second terminal, with the same `ZYNTHIAN_WEBVIEW_SOCKET` value:
+For the browser version, run `zynthian-controller browser` (Safari on this Mac),
+or use the authenticated URL printed by `start`. The backend currently accepts
+one control window at a time: close the previous frontend when switching between
+native and browser. The launcher still binds only to localhost; this change does
+not expose the backend on the network.
+
+## Native and browser input
+
+SDL opens connected controllers and watches hotplug events in the C++ process.
+Qt WebChannel delivers semantic actions and connection status to the HTML model.
+The status line identifies the native source with `SDL`. Native input is inactive
+when the app loses focus. Controllers must return to neutral after connection,
+focus changes or page reload before actions resume. Directional controls repeat;
+activation does not. LB modifies fine adjustment and X/Y actions, including when
+SDL batches simultaneous button presses.
+
+The native host leaves keyboard and text-field handling with the HTML frontend.
+It disables browser gamepad polling to avoid duplicate actions. A browser without
+the native channel uses the existing Gamepad API mappings. No browser gamepad
+permission or browser extension is needed by the native SDL path.
+
+The current mappings remain provisional. See the [controller guide](../README.md#controls)
+and [offline manual](../../../docs/zynthian-controller-manual.html). The shared
+[screen map](../controller-node/SCREEN-COVERAGE.md) describes current HTML coverage.
+Tracker, Euclidean and randomizer remain previews.
+
+## Transport and security
+
+The host uses an in-memory Qt WebEngine profile. Only the selected localhost
+origin can navigate the webview and receive its native input channel. It injects
+Qt's bundled WebChannel script directly; the server's CSP, token/Origin checks
+and Chromium sandbox remain enabled. The channel exposes controller actions and
+status, not arbitrary filesystem or shell access.
+
+Node handles HTTP/WebSocket transport to the existing backend. The host uses the
+same browser audio stream and **Enable audio** button. Physical MIDI routing
+and engine playback remain Zynthian's responsibility.
+
+The older C++ `Model` and direct-socket live tests remain as compatibility test
+code; the desktop host uses the current shared JavaScript model so it does not
+lose newer HTML screens, parameter entry, navigation or error handling.
+
+## Verify
+
+From the repository root:
 
 ```sh
-controller-webview/build/zynthian-controller --socket "$ZYNTHIAN_WEBVIEW_SOCKET" --fullscreen
+cmake -S tools/zynthian-controller/controller-webview -B build/controller-webview -DCMAKE_BUILD_TYPE=Release
+cmake --build build/controller-webview --parallel 4
+ctest --test-dir build/controller-webview --output-on-failure
+cd tools/zynthian-controller/controller-node
+npm test
+npx playwright test --grep 'native input:|browser input:'
 ```
 
-If `XDG_RUNTIME_DIR` is unset, choose an absolute private directory owned by the
-same user with mode 0700 and use its socket path in both commands. If using a
-service to start Zynthian, set the variable in that service's environment and run
-this fork's `zynthian_main.py`; do not launch a second Zynthian instance on top of
-the service. The optional bridge does nothing unless the variable is set.
+The native tests cover SDL virtual-controller navigation, hold/repeat behavior,
+focus rearming, simultaneous modifiers, endpoint restrictions and the existing
+backend protocol. Browser tests cover both orders of WebChannel initialization,
+text-field editing and the browser Gamepad path. Virtual-controller tests do not
+establish physical hardware behavior; native device status and user interaction
+must also be checked on the connected controller.
 
-The socket is mode 0600, accepts one client, and exposes a small allowlist of UI
-actions. It opens no TCP listener. Commands include the current screen revision;
-stale selections are rejected. The frontend reconnects after disconnection and
-does not replay commands. Existing socket paths are never replaced automatically;
-after a crash, remove a stale socket only after confirming the old process ended.
+Local development run on 2026-10-26 used the uncommitted working tree based on
+`a8619a8e0787d483c0649b42340f261daae2d9d3`. The native build and both CTest suites
+passed, as did all 10 Node tests and the three targeted Playwright input tests.
+The macOS host connected to the existing backend and reported
+`SDL · Nintendo Switch Pro Controller`; the user confirmed D-pad Right moved
+the selection from Add Chain to Chain Manager. The latest build was then
+relaunched successfully with audio enabled. Audible playback in this native
+session has not yet been confirmed.
 
-This assumes a working Zynthian installation. It does not install Zynthian's
-native libraries, JACK, plugins or SteamOS dependencies. Root-run Zynthian and a
-normal-user frontend are not currently connected by this same-user transport.
+That run used backend image
+`sha256:75f35b26ab00471c9b775c4b6d544115558b7162a086d5d5dfc5336871ee60c4`,
+with the Xvfb display-allocation fix and updated `boot.mjs` / `input.mjs` applied
+to the existing container. It was not a fresh image build or hardware audio test.
 
-## Controls
-
-| Intent | Gamepad (SDL standard layout) | Keyboard |
-| --- | --- | --- |
-| Navigate | D-pad | Arrows |
-| Select / activate | A | Enter |
-| Back | B | Esc / Backspace |
-| Existing bold action / options | Y | F4 |
-| Adjust selected parameter | D-pad left / right | Left / right |
-| Fine adjustment | Hold LB while adjusting | Hold Shift while adjusting |
-| Main Menu | Start | Home |
-| Mixer | View / Back | F2 |
-| Snapshots | RB | F3 |
-| All sounds off | Touch/click sidebar | F12 |
-| Page through long lists | — | Page Up / Page Down |
-
-Touch / mouse selection and parameter +/- buttons are also available. Up/down
-move through list items or grid rows. Only directional actions repeat while held;
-activation does not. Input is cleared on loss of focus and controller removal.
-Note entry and audition use Zynthian’s existing piano-roll methods and engine.
-External MIDI performance remains in Zynthian’s input path.
-
-## Sequencer operation
-
-The piano roll takes interaction inspiration from Korg Gadget for Nintendo Switch:
-left-stick cursor movement, direct right-stick note edits, a readable note grid
-and a velocity lane. Button mappings are this port’s own SDL mappings.
-Reference: https://www.detune.co.jp/KORG_Gadget_User_Manual_en.html
-
-The piano roll, CC editor and clip launcher fill the workspace beneath a single
-44-pixel bar. Menu opens an overlay with actions for the current editor and mode,
-including navigation. It never resizes the grid. Back/Esc or a tap outside closes
-it; choosing an action returns focus to the grid. Native options remain available
-through Options inside this menu. Inline numeric controls keep the menu open.
-
-| Intent | Gamepad | Keyboard / touch |
-| --- | --- | --- |
-| Open launcher | Sidebar | F6 |
-| Move clip / note cursor | D-pad or left stick | Arrows / touch a cell |
-| Toggle clip / note | A | Enter / Launch / ± Note |
-| Edit clip / full note parameters | Y | F4 / Menu → Edit |
-| Play selected sequence | X | Space |
-| MIDI record (pattern editors) | LB + X | R |
-| Context menu | LB + Y | F5 / Menu |
-| Note length | Right stick left/right | [ / ] or Menu → Shorten / Lengthen |
-| Note velocity | Right stick up/down | − / = or Menu → Lower / Raise velocity |
-| Fine note duration | Hold LB | Hold Shift |
-| Open / close context menu | Left-stick click | Tab; Back closes menu |
-| Start range selection | Right-stick click | Menu → Select / copy block |
-| Page steps / phrases | — | Page Up / Page Down |
-
-The launcher shows eight phrases and eight chains at a time, following native
-selection. Touch selects a pad; A/Launch launches it. Y opens its native note or
-audio-clip editor. Phrase arrangement selects the main phrase column and opens
-Zynthian’s options for repeats, follow actions, tempo, cloning, moving and deletion.
-In move mode, up/down invokes the original phrase mover; A finishes. The legacy
-timeline arranger is disabled in this upstream baseline; song structure uses phrases.
-
-The note view shows 16 steps and 12 rows from the native scale/drum keymap. Note
-bars include duration/offset and notes that start before the visible window.
-The velocity lane shows the selected pitch. Y enters native note editing:
-left/right selects duration, velocity, offset, stutter or probability parameters;
-up/down changes the value, A finishes, B exits. Range selection uses native block
-copy/paste and multi-note edits. MIDI record, pattern history, file loading/saving,
-SMF import/export, swing, scale, chord entry and quantization stay in Zynthian.
-
-Edit CC switches to the native CC editor. Left/right selects a step; up/down
-changes its value, A toggles an event. Previous/Next CC chooses the controller;
-Options includes interpolation. Native CC multi-edit modes remain unavailable.
-
-`zynwebview/sequencer.py` serializes bounded view windows and delegates editing;
-it does not implement a new sequencer or maintain a second song model. Cursor,
-pattern, phrase, keymap and edit-mode changes invalidate stale commands. Each
-successful command returns its resulting state and revision with its acknowledgment.
-
-## Validation and remaining work
-
-The earlier C++ host was exercised against the supplied backend before the
-frontend moved to Node/HTML. Current live browser checks and remaining limits
-are recorded in [runtime/VALIDATION.md](../runtime/VALIDATION.md). The shared
-HTML/CSS and bridge now live alongside the Node frontend. Physical gamepads,
-Steam Deck/Pi hardware, USB devices, latency and thermal behavior remain
-unvalidated. Tracker, Euclidean and randomizer remain previews.
-
-New files use GPL-2.0-or-later; see `../LICENSE.txt`.
-
-## Additional sequencer mockups
-
-`mockups/` contains an offline, interactive prototype of tracker, Euclidean and
-randomizer sequencing, a sequencer-type chooser, and pattern/step settings.
-It reuses this frontend's existing style and full-workspace layout. Edits,
-parameter changes, generator previews, locks, undo and visual transport operate
-in memory. This prototype is not loaded by the native application and has no
-Zynthian, audio or MIDI connection. See `mockups/README.md` to build and exercise it.
+All supplied license notices remain intact; new host code is GPL-2.0-or-later.

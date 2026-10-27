@@ -3,13 +3,16 @@ set -euo pipefail
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 name=crest-zynthian-controller
 image=localhost/zynthian-controller:overlay
+host_build="$here/../../build/controller-webview"
 if [[ $(uname -s) == Darwin ]]; then
     data="${ZYNTHIAN_CONTROLLER_DATA:-$HOME/Library/Application Support/crest-zynthian-controller}"
 else
     data="${ZYNTHIAN_CONTROLLER_DATA:-${XDG_DATA_HOME:-$HOME/.local/share}/crest-zynthian-controller}"
 fi
 [[ $data == /* ]] || { echo 'ZYNTHIAN_CONTROLLER_DATA must be absolute.' >&2; exit 2; }
-docker info >/dev/null 2>&1 || { echo 'Start Docker Desktop (Mac) or Docker Engine (Linux).' >&2; exit 1; }
+if [[ ${1:-start} != host-build ]]; then
+    docker info >/dev/null 2>&1 || { echo 'Start Docker Desktop (Mac) or Docker Engine (Linux).' >&2; exit 1; }
+fi
 existing() { docker container inspect "$name" >/dev/null 2>&1; }
 check_owner() {
     local label mount
@@ -19,6 +22,20 @@ check_owner() {
     [[ $mount == "$data" ]] || { echo "Container uses $mount; requested $data. Leaving it untouched." >&2; exit 1; }
 }
 print_url() { printf 'http://localhost:8766/#token=%s\n' "$(cat "$data/access-token")"; }
+build_host() {
+    cmake -S "$here/controller-webview" -B "$host_build" -DCMAKE_BUILD_TYPE=Release
+    cmake --build "$host_build" --target zynthian-controller --parallel 4
+}
+open_host() {
+    start >/dev/null
+    # Rebuild incrementally so launch always uses this checkout's native code.
+    build_host
+    if [[ $(uname -s) == Darwin ]]; then
+        open "$host_build/zynthian-controller.app" --args --token-file "$data/access-token"
+    else
+        exec "$host_build/zynthian-controller" --token-file "$data/access-token"
+    fi
+}
 build() {
     docker image inspect localhost/zynthian-web:oram >/dev/null 2>&1 || {
         echo 'Missing installed localhost/zynthian-web:oram runtime. This build does not fetch source repositories.' >&2; exit 1;
@@ -58,11 +75,13 @@ PY
 }
 case "${1:-start}" in
     build) build ;;
+    host-build) build_host ;;
     start) start ;;
-    open) start >/dev/null; if [[ $(uname -s) == Darwin ]]; then open "$(print_url)"; else xdg-open "$(print_url)"; fi ;;
+    open) open_host ;;
+    browser) start >/dev/null; if [[ $(uname -s) == Darwin ]]; then open -a 'Safari' "$(print_url)"; else xdg-open "$(print_url)"; fi ;;
     stop) check_owner; docker stop -t 30 "$name" ;;
     status) check_owner; docker inspect -f '{{.State.Status}}' "$name" ;;
     url) check_owner; print_url ;;
     logs) check_owner; tail -n 60 "$data/logs/backend.log" "$data/logs/frontend.log" ;;
-    *) echo "Usage: $0 {start|open|stop|status|url|logs|build}" >&2; exit 2 ;;
+    *) echo "Usage: $0 {start|open|browser|stop|status|url|logs|build|host-build}" >&2; exit 2 ;;
 esac
