@@ -1,0 +1,78 @@
+{
+  "status": "abandoned; visual reference only",
+  "archivedDate": "2026-10-26",
+  "sourceCommit": "613b1d7",
+  "sourceBranch": "experiment/crest-tracker-ui",
+  "files": [
+    {
+      "path": "screenshots/song.png",
+      "sha256": "4ce0a4db18863ab58e2247f6cf31bdb6f26a6fd09dd8bf2daad4939543ac8f74",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/phrase.png",
+      "sha256": "a8a6798104c2ed367aeedc0faf0dcc72bfd21a294e072939c74c0ad820f6f689",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/piano-roll.png",
+      "sha256": "03d3b55737c96c535f821ece62af7cea65aa7485095a374bbf2402b4fddea002",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/pattern-options.png",
+      "sha256": "8092f8f05af44cbf1944ee88ac008dab376da2c152d3c8f3f8364406a03697fb",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/instruments.png",
+      "sha256": "90c2ce9a6a03e73a3ac1cc85c7e9145aafbd6b9c1205dbd8c37231139d123b4d",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/instrument.png",
+      "sha256": "d0b6692041b789252c9fe329ed1e0fe18372a3c1285205d5090a2edd2042f6c9",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/engine-category.png",
+      "sha256": "7039fa19334408778408de98483a469514363b56b68244c7f5b9750d8e711d40",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/mixer.png",
+      "sha256": "7d7e283d247b439e7641519af8cc60cd16bf5989a4c84ab7a745838fb4806e18",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/workspaces.png",
+      "sha256": "f3d58a476e3cb7e3fbc1fb611b620e80037b2e2a815e694b96ae35231116fdac",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "screenshots/modifier.png",
+      "sha256": "b541ac054e9c0fd766587deae9a616651be2dadcdfdc0eaae5154a5a64669155",
+      "width": 1280,
+      "height": 800
+    },
+    {
+      "path": "frontend-style.css",
+      "source": "tools/zynthian-controller/controller-node/web/style.css",
+      "sha256": "66703df61a9bee529f58df1847c2e64c56b088a0daa5b6316d800dcd39a240be"
+    },
+    {
+      "path": "interactive-demo.html",
+      "source": "docs/crest-tracker-zynthian-plan.html",
+      "sha256": "6e7aeeaac6644286f1336b93a2d6c041fba2c1a614f98e41f064e15e0c142028"
+    }
+  ]
+}
